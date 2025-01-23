@@ -162,7 +162,10 @@ if __name__ == "__main__":
     agent = initialize_agent(tools=tools, llm=llm, agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION, verbose=True)
 
     # Example usage
-    res = agent.run("Identify business drivers for Total Net Sales")
+    # agent.run("Get structure of workbook")
+    # agent.run("Query cell A1 in Sheet1")
+    # agent.run("Identify business drivers for Total Net Sales")
+    res= agent.run("Query cell B15 in Expenses")
     print(res)
 
     excel_agent.close_workbook()
