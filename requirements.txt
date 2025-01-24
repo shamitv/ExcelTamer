@@ -1,3 +1,9 @@
 xlwings
 pandas
 langchain
+langchain_community
+langchain_openai
+python-dotenv
+langchain-core
+langchain-openai
+Pillow
