@@ -87,6 +87,33 @@ class ExcelTamerAgent:
             })
         return structure_info
 
+    def query_cell(self, sheet_name, cell):
+        """Retrieve the value and formula of a specific cell."""
+        sheet = self.wb.sheets[sheet_name]
+        value = sheet.range(cell).value
+        formula = sheet.range(cell).formula
+        return {'Value': value, 'Formula': formula}
+
+    def get_named_ranges(self):
+        """Retrieve all named ranges in the workbook."""
+        return {name.name: name.refers_to_range.address for name in self.wb.names}
+
+    def capture_screenshot(self, sheet_name, cell_range):
+        """Capture a screenshot of the specified sheet or range."""
+        sheet = self.wb.sheets[sheet_name]
+        sheet.range(cell_range).api.Show()
+        screenshot_path = f"{sheet_name}_{cell_range}.png"
+        sheet.api.ExportAsFixedFormat(0, screenshot_path)
+        return screenshot_path
+
+    def change_value(self, sheet_name, cell, new_value):
+        """Change the value of a specific cell."""
+        sheet = self.wb.sheets[sheet_name]
+        sheet.range(cell).value = new_value
+        self.wb.save()
+        return f"Value in {sheet_name} at {cell} changed to {new_value}"
+
+
     def close_workbook(self):
         """Close the workbook and clean up resources."""
         self.wb.close()
@@ -102,17 +129,43 @@ if __name__ == "__main__":
 
     llm = ChatOpenAI(temperature=0, model_name="gpt-4")
 
-    agent = initialize_agent([
+    tools = [
+        Tool(name="Search Function",
+             func=lambda args: excel_agent.search_value(args["metric"], args["time_period"]),
+             description="Search for specific values based on metric and time period in the Excel workbook."),
+        Tool(name="Identify Query Type",
+             func=lambda query: excel_agent.identify_query_type(query),
+             description="Identify if a search term refers to a temporal metric search, atemporal metric search, or generic text search."),
+        Tool(name="Structure Function",
+             func=excel_agent.get_structure,
+             description="Get the structure of the workbook including sheets, rows, and columns."),
+        Tool(name="Query Function",
+             func=lambda args: excel_agent.query_cell(args["sheet_name"], args["cell"]),
+             description="Query a cell to get its value and formula."),
+        Tool(name="Names Function",
+             func=excel_agent.get_named_ranges,
+             description="Retrieve all named ranges from the workbook."),
+        Tool(name="Screenshot Function",
+             func=lambda args: excel_agent.capture_screenshot(args["sheet_name"], args["cell_range"]),
+             description="Capture a screenshot of a specific sheet or range."),
+        Tool(name="Change Value Function",
+             func=lambda args: excel_agent.change_value(args["sheet_name"], args["cell"], args["new_value"]),
+             description="Change the value of a specific cell in the workbook."),
         Tool(name="Identify Business Drivers",
              func=lambda metric: excel_agent.identify_business_drivers(metric),
              description="Identify business drivers for a given metric by analyzing formulas and using LLM to interpret business context."),
         Tool(name="List Open Workbooks",
              func=excel_agent.list_open_workbooks,
              description="List all currently open Excel workbooks.")
-    ], llm, agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION, verbose=True)
+    ]
+
+    agent = initialize_agent(tools=tools, llm=llm, agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION, verbose=True)
 
     # Example usage
-    res = agent.run("Identify business drivers for Total Net Sales")
+    # agent.run("Get structure of workbook")
+    # agent.run("Query cell A1 in Sheet1")
+    # agent.run("Identify business drivers for Total Net Sales")
+    res= agent.run("Query cell B15 in Expenses")
     print(res)
 
     excel_agent.close_workbook()
