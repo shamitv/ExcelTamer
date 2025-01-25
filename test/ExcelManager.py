@@ -52,3 +52,15 @@ class ExcelManager:
         except Exception as e:
             print(f"Failed to capture screenshot: {e}")
             return False
+
+    def get_structure(self):
+        """Return the structure of the workbook."""
+        structure_info = []
+        for sheet in self.wb.sheets:
+            used_range = sheet.used_range
+            structure_info.append({
+                'Sheet Name': sheet.name,
+                'Rows': used_range.rows.count,
+                'Columns': used_range.columns.count
+            })
+        return structure_info
