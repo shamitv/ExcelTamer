@@ -7,7 +7,7 @@ import base64
 import os
 import tempfile
 
-from ExcelManager import ExcelManager
+from ExcelTamer.ExcelAutomation import ExcelManager
 
 from langchain.agents import initialize_agent, AgentType
 from langchain_core.tools import tool

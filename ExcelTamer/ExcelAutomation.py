@@ -70,7 +70,7 @@ class ExcelAutomation:
                     'Refers To': name.refers_to_range.address
                 })
             structure_info.append({
-                'Sheet Name': sheet.tool_name,
+                'Sheet Name': sheet.name,
                 'Rows': used_range.rows.count,
                 'Columns': used_range.columns.count,
                 'Range': used_range.address,
