@@ -7,3 +7,4 @@ python-dotenv
 langchain-core
 langchain-openai
 Pillow
+chainlit

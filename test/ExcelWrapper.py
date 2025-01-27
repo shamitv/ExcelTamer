@@ -1,13 +1,18 @@
 from langchain.agents import AgentType, initialize_agent
 from langchain.tools import Tool
-from langchain.chat_models import ChatOpenAI
+from langchain_core.language_models import BaseChatModel
+from langchain_core.tools import tool
+from langchain_openai import ChatOpenAI
 import xlwings as xw
 import pandas as pd
 
+from dotenv import load_dotenv
 
+load_dotenv()
 
-class ExcelTamerAgent:
-    def __init__(self, file_path=None):
+class ExcelWrapper:
+    def __init__(self, llm:BaseChatModel , file_path:str=None):
+        self.llm = llm
         if file_path:
             self.file_path = file_path
             self.app = xw.App(visible=True)
@@ -16,7 +21,7 @@ class ExcelTamerAgent:
             self.app = xw.apps.active
             self.wb = self.app.books.active
 
-    def search_value(self, metric, time_period):
+    def search_value(self, metric:str, time_period:str)->list[dict]:
         """Search for a value in the workbook based on metric and time period."""
         results = []
         for sheet in self.wb.sheets:
@@ -57,9 +62,11 @@ class ExcelTamerAgent:
                     return response
         return "No drivers found."
 
+
     def list_open_workbooks(self):
         """List all currently open Excel workbooks."""
         return [wb.name for wb in xw.books]
+
 
     def identify_query_type(self, search_term):
         """Identify if a search term refers to a temporal metric search, atemporal metric search, or generic text search using LLM."""
@@ -75,7 +82,7 @@ class ExcelTamerAgent:
         response = llm.predict_messages([query_prompt])
         return response['query_type']
 
-    def get_structure(self):
+    def get_structure(self)->list[dict]:
         """Return the structure of the workbook."""
         structure_info = []
         for sheet in self.wb.sheets:
@@ -87,8 +94,9 @@ class ExcelTamerAgent:
             })
         return structure_info
 
-    def query_cell(self, sheet_name, cell):
-        """Retrieve the value and formula of a specific cell."""
+    @tool
+    def query_cell(self, sheet_name:str, cell:str) ->dict:
+        """Retrieve the value and formula of a specific cell.  Ensure that sheen name and cell are provided as two parameters."""
         sheet = self.wb.sheets[sheet_name]
         value = sheet.range(cell).value
         formula = sheet.range(cell).formula
@@ -125,9 +133,9 @@ if __name__ == "__main__":
     print(res)
     agent.close_workbook()"""
 
-    excel_agent = ExcelTamerAgent("example.xlsx")
 
-    llm = ChatOpenAI(temperature=0, model_name="gpt-4")
+    llm = ChatOpenAI(temperature=0, model_name="gpt-4o-mini")
+    excel_agent = ExcelWrapper(llm, file_path="example.xlsx")
 
     tools = [
         Tool(name="Search Function",
@@ -139,9 +147,7 @@ if __name__ == "__main__":
         Tool(name="Structure Function",
              func=excel_agent.get_structure,
              description="Get the structure of the workbook including sheets, rows, and columns."),
-        Tool(name="Query Function",
-             func=lambda args: excel_agent.query_cell(args["sheet_name"], args["cell"]),
-             description="Query a cell to get its value and formula."),
+        excel_agent.query_cell,
         Tool(name="Names Function",
              func=excel_agent.get_named_ranges,
              description="Retrieve all named ranges from the workbook."),
@@ -159,7 +165,11 @@ if __name__ == "__main__":
              description="List all currently open Excel workbooks.")
     ]
 
-    agent = initialize_agent(tools=tools, llm=llm, agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION, verbose=True)
+    agent = initialize_agent(tools=tools, llm=llm, agent=AgentType.OPENAI_FUNCTIONS, verbose=True)
+
+    print(excel_agent.query_cell.name)
+    print(excel_agent.query_cell.description)
+    print(excel_agent.query_cell.args)
 
     # Example usage
     # agent.run("Get structure of workbook")
