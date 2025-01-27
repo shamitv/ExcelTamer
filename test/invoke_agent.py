@@ -16,3 +16,8 @@ agent = create_agent(excel_path, llm)
 response = agent.invoke("Is there a costs sheet")
 
 print(response)
+
+response = agent.invoke("What is the in cell B12 of Expenses?")
+
+print(response)
+

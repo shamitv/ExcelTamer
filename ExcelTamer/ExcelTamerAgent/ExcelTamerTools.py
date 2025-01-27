@@ -55,3 +55,43 @@ class ExcelGetStructureTool(BaseTool):
     def description(self) -> str:
         """A brief description of the tool's functionality."""
         return self.tool_description
+
+
+class ExcelCellValueTool(BaseTool):
+        """Tool to query Formula / Value of a cell."""
+
+        tool_name: ClassVar[str] = "excel_query_cell"
+        tool_description: ClassVar[str] =  """Retrieve the value and formula of a specific cell.  Ensure that sheet name and cell are provided as two parameters."""
+
+        _excel_automation: ExcelAutomation = PrivateAttr()
+        _executor: ThreadPoolExecutor = PrivateAttr()
+
+        def __init__(self, excel_automation: ExcelAutomation, executor: ThreadPoolExecutor):
+            """Constructor accepts an ExcelAutomation instance and a ThreadPoolExecutor."""
+            super().__init__(name=self.tool_name, description=self.tool_description)
+            self._excel_automation = excel_automation
+            self._executor = executor
+
+        def _impl(self, sheet_name: str, cell: str) -> dict:
+            """Sync wrapper for the get_structure method."""
+            # Use the ThreadPoolExecutor to ensure that xlwings interacts with Excel in a separate thread
+            future = self._executor.submit(self._excel_automation.query_cell, sheet_name, cell)
+            return future.result()
+
+        def _run(self, sheet_name: str, cell: str) -> Any:
+            """Sync entry point for the tool."""
+            return self._impl(sheet_name, cell)
+
+        async def _arun(self, sheet_name: str, cell: str) -> Any:
+            """Async entry point for the tool."""
+            return self._impl(sheet_name, cell)
+
+        @property
+        def name(self) -> str:
+            """The name of the tool."""
+            return self.tool_name
+
+        @property
+        def description(self) -> str:
+            """A brief description of the tool's functionality."""
+            return self.tool_description
