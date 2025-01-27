@@ -1,6 +1,6 @@
 import xlwings as xw
 
-class ExcelManager:
+class ExcelAutomation:
     def __init__(self, file_path: str = None):
         self.app = xw.App(visible=False)
         self.wb = self.app.books.open(file_path) if file_path else self.app.books.add()
