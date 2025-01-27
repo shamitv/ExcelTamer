@@ -2,8 +2,16 @@ import xlwings as xw
 
 class ExcelAutomation:
     def __init__(self, file_path: str = None):
-        self.app = xw.App(visible=True)
-        self.wb = self.app.books.open(file_path) if file_path else self.app.books.add()
+        self.app = xw.apps.active if xw.apps else xw.App(visible=True)
+
+        if file_path:
+            self.wb = self.app.books.open(file_path)
+        else:
+            self.wb = self.app.books.active if self.app.books else self.app.books.add()
+
+
+    def list_open_workbooks(self) -> list[str]:
+        return [wb.fullname for wb in self.app.books]
 
     def save(self, file_path: str = None) -> None:
         if file_path:
