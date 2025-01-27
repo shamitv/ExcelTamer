@@ -210,7 +210,83 @@ class ExcelAnalyzeImageTool(BaseTool):
         """A brief description of the tool's functionality."""
         return self.tool_description
 
+class ExcelSaveTool(BaseTool):
+    """Tool to save the Excel workbook."""
 
+    tool_name: ClassVar[str] = "excel_save"
+    tool_description: ClassVar[str] = """Save the Excel workbook to the specified file path. If no file path is provided, the workbook will be saved in its current location."""
+
+    _excel_automation: ExcelAutomation = PrivateAttr()
+    _executor: ThreadPoolExecutor = PrivateAttr()
+
+    def __init__(self, excel_automation: ExcelAutomation, executor: ThreadPoolExecutor):
+        """Constructor accepts an ExcelAutomation instance and a ThreadPoolExecutor."""
+        super().__init__(name=self.tool_name, description=self.tool_description)
+        self._excel_automation = excel_automation
+        self._executor = executor
+
+    def _impl(self, file_path: str = None) -> None:
+        """Sync wrapper for the save method."""
+        # Use the ThreadPoolExecutor to ensure that xlwings interacts with Excel in a separate thread
+        future = self._executor.submit(self._excel_automation.save, file_path)
+        future.result()
+
+    def _run(self, file_path: str = None) -> None:
+        """Sync entry point for the tool."""
+        return self._impl(file_path)
+
+    async def _arun(self, file_path: str = None) -> None:
+        """Async entry point for the tool."""
+        return self._impl(file_path)
+
+    @property
+    def name(self) -> str:
+        """The name of the tool."""
+        return self.tool_name
+
+    @property
+    def description(self) -> str:
+        """A brief description of the tool's functionality."""
+        return self.tool_description
+
+class ExcelCloseTool(BaseTool):
+    """Tool to close the Excel workbook."""
+
+    tool_name: ClassVar[str] = "excel_close"
+    tool_description: ClassVar[str] = """Close the Excel workbook."""
+
+    _excel_automation: ExcelAutomation = PrivateAttr()
+    _executor: ThreadPoolExecutor = PrivateAttr()
+
+    def __init__(self, excel_automation: ExcelAutomation, executor: ThreadPoolExecutor):
+        """Constructor accepts an ExcelAutomation instance and a ThreadPoolExecutor."""
+        super().__init__(name=self.tool_name, description=self.tool_description)
+        self._excel_automation = excel_automation
+        self._executor = executor
+
+    def _impl(self) -> None:
+        """Sync wrapper for the close method."""
+        # Use the ThreadPoolExecutor to ensure that xlwings interacts with Excel in a separate thread
+        future = self._executor.submit(self._excel_automation.close)
+        future.result()
+
+    def _run(self) -> None:
+        """Sync entry point for the tool."""
+        return self._impl()
+
+    async def _arun(self) -> None:
+        """Async entry point for the tool."""
+        return self._impl()
+
+    @property
+    def name(self) -> str:
+        """The name of the tool."""
+        return self.tool_name
+
+    @property
+    def description(self) -> str:
+        """A brief description of the tool's functionality."""
+        return self.tool_description
 
 class ExcelWriteCellTool(BaseTool):
     """Tool to modify Value of a cell."""
