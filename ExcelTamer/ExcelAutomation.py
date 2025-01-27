@@ -2,7 +2,7 @@ import xlwings as xw
 
 class ExcelAutomation:
     def __init__(self, file_path: str = None):
-        self.app = xw.App(visible=False)
+        self.app = xw.App(visible=True)
         self.wb = self.app.books.open(file_path) if file_path else self.app.books.add()
 
     def save(self, file_path: str = None) -> None:
