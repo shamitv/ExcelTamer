@@ -102,6 +102,8 @@ class ExcelCellValueTool(BaseTool):
             """A brief description of the tool's functionality."""
             return self.tool_description
 
+
+
 class ExcelAnalyzeImageTool(BaseTool):
     """Tool to analyze an image of an Excel sheet."""
 
@@ -197,6 +199,51 @@ class ExcelAnalyzeImageTool(BaseTool):
     async def _arun(self, question: str, sheet_name: str, cell_range: str = None) -> str:
         """Async entry point for the tool."""
         return self._impl(question, sheet_name, cell_range)
+
+    @property
+    def name(self) -> str:
+        """The name of the tool."""
+        return self.tool_name
+
+    @property
+    def description(self) -> str:
+        """A brief description of the tool's functionality."""
+        return self.tool_description
+
+
+class ExcelWriteCellTool(BaseTool):
+    """Tool to modify Value of a cell."""
+
+    tool_name: ClassVar[str] = "excel_change_cell_value"
+    tool_description: ClassVar[
+        str] = """Modify value of a specific cell.  Ensure that sheet name and cell are provided as two parameters.
+                    :param sheet_name: The name of the sheet to capture the screenshot.
+                    :param cell: Cell address.
+                    :param value: New value to be written to the cell.
+        """
+
+    _excel_automation: ExcelAutomation = PrivateAttr()
+    _executor: ThreadPoolExecutor = PrivateAttr()
+
+    def __init__(self, excel_automation: ExcelAutomation, executor: ThreadPoolExecutor):
+        """Constructor accepts an ExcelAutomation instance and a ThreadPoolExecutor."""
+        super().__init__(name=self.tool_name, description=self.tool_description)
+        self._excel_automation = excel_automation
+        self._executor = executor
+
+    def _impl(self, sheet_name: str, cell: str, value: str) -> dict:
+        """Sync wrapper for the get_structure method."""
+        # Use the ThreadPoolExecutor to ensure that xlwings interacts with Excel in a separate thread
+        future = self._executor.submit(self._excel_automation.write_cell,sheet_name, cell,value)
+        return future.result()
+
+    def _run(self, sheet_name: str, cell: str,value:str) -> Any:
+        """Sync entry point for the tool."""
+        return self._impl(sheet_name, cell,value)
+
+    async def _arun(self, sheet_name: str, cell: str, value:str) -> Any:
+        """Async entry point for the tool."""
+        return self._impl(sheet_name, cell,value)
 
     @property
     def name(self) -> str:
