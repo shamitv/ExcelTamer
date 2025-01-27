@@ -2,8 +2,16 @@ import xlwings as xw
 
 class ExcelAutomation:
     def __init__(self, file_path: str = None):
-        self.app = xw.App(visible=True)
-        self.wb = self.app.books.open(file_path) if file_path else self.app.books.add()
+        self.app = xw.apps.active if xw.apps else xw.App(visible=True)
+
+        if file_path:
+            self.wb = self.app.books.open(file_path)
+        else:
+            self.wb = self.app.books.active if self.app.books else self.app.books.add()
+
+
+    def list_open_workbooks(self) -> list[str]:
+        return [wb.fullname for wb in self.app.books]
 
     def save(self, file_path: str = None) -> None:
         if file_path:
@@ -55,6 +63,43 @@ class ExcelAutomation:
         except Exception as e:
             print(f"Failed to capture screenshot: {e}")
             return False
+
+    def find_cells_by_value(self, value: str, sheet_name: str = None, search_whole_workbook: bool = False) -> list[str]:
+        """
+        Searches for all cells containing the specified value.
+
+        :param value: The value to search for.
+        :param sheet_name: The name of the sheet to search in (optional, searches active sheet if not provided).
+        :param search_whole_workbook: Boolean flag to search across all sheets or just one.
+        :return: A list of cell addresses containing the value.
+        """
+        found_cells = []
+        sheets = self.wb.sheets if search_whole_workbook else [
+            self.wb.sheets[sheet_name] if sheet_name else self.wb.sheets.active]
+        for sheet in sheets:
+            for cell in sheet.used_range:
+                if cell.value == value:
+                    found_cells.append(f"{sheet.name}!{cell.address}")
+        return found_cells
+
+    def find_cells_by_partial_value(self, value: str, sheet_name: str = None, search_whole_workbook: bool = False) -> \
+    list[str]:
+        """
+        Searches for all cells containing the specified partial value.
+
+        :param value: The substring to search for within cells.
+        :param sheet_name: The name of the sheet to search in (optional, searches active sheet if not provided).
+        :param search_whole_workbook: Boolean flag to search across all sheets or just one.
+        :return: A list of cell addresses containing the partial value.
+        """
+        found_cells = []
+        sheets = self.wb.sheets if search_whole_workbook else [
+            self.wb.sheets[sheet_name] if sheet_name else self.wb.sheets.active]
+        for sheet in sheets:
+            for cell in sheet.used_range:
+                if isinstance(cell.value, str) and value in cell.value:
+                    found_cells.append(f"{sheet.name}!{cell.address}")
+        return found_cells
 
     def get_structure(self):
         """Return the structure of the workbook."""

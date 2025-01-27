@@ -41,8 +41,9 @@ class ExcelGetStructureTool(BaseTool):
 
     async def _get_structure_async(self) -> List[dict]:
         """Async wrapper for the get_structure method using ThreadPoolExecutor."""
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(self._executor, self._get_structure_sync)
+        #loop = asyncio.get_event_loop()
+        #return await loop.run_in_executor(self._executor, self._get_structure_sync)
+        return self._get_structure_sync()
 
     def _run(self, *args: Any, **kwargs: Any) -> Any:
         """Sync entry point for the tool."""
@@ -206,4 +207,174 @@ class ExcelAnalyzeImageTool(BaseTool):
     @property
     def description(self) -> str:
         """A brief description of the tool's functionality."""
+        return self.tool_description
+
+class ExcelSaveTool(BaseTool):
+    """Tool to save the Excel workbook."""
+
+    tool_name: ClassVar[str] = "excel_save"
+    tool_description: ClassVar[str] = """Save the Excel workbook to the specified file path. If no file path is provided, the workbook will be saved in its current location."""
+
+    _excel_automation: ExcelAutomation = PrivateAttr()
+    _executor: ThreadPoolExecutor = PrivateAttr()
+
+    def __init__(self, excel_automation: ExcelAutomation, executor: ThreadPoolExecutor):
+        """Constructor accepts an ExcelAutomation instance and a ThreadPoolExecutor."""
+        super().__init__(name=self.tool_name, description=self.tool_description)
+        self._excel_automation = excel_automation
+        self._executor = executor
+
+    def _impl(self, file_path: str = None) -> None:
+        """Sync wrapper for the save method."""
+        # Use the ThreadPoolExecutor to ensure that xlwings interacts with Excel in a separate thread
+        future = self._executor.submit(self._excel_automation.save, file_path)
+        future.result()
+
+    def _run(self, file_path: str = None) -> None:
+        """Sync entry point for the tool."""
+        return self._impl(file_path)
+
+    async def _arun(self, file_path: str = None) -> None:
+        """Async entry point for the tool."""
+        return self._impl(file_path)
+
+    @property
+    def name(self) -> str:
+        """The name of the tool."""
+        return self.tool_name
+
+    @property
+    def description(self) -> str:
+        """A brief description of the tool's functionality."""
+        return self.tool_description
+
+class ExcelCloseTool(BaseTool):
+    """Tool to close the Excel workbook."""
+
+    tool_name: ClassVar[str] = "excel_close"
+    tool_description: ClassVar[str] = """Close the Excel workbook."""
+
+    _excel_automation: ExcelAutomation = PrivateAttr()
+    _executor: ThreadPoolExecutor = PrivateAttr()
+
+    def __init__(self, excel_automation: ExcelAutomation, executor: ThreadPoolExecutor):
+        """Constructor accepts an ExcelAutomation instance and a ThreadPoolExecutor."""
+        super().__init__(name=self.tool_name, description=self.tool_description)
+        self._excel_automation = excel_automation
+        self._executor = executor
+
+    def _impl(self) -> None:
+        """Sync wrapper for the close method."""
+        # Use the ThreadPoolExecutor to ensure that xlwings interacts with Excel in a separate thread
+        future = self._executor.submit(self._excel_automation.close)
+        future.result()
+
+    def _run(self) -> None:
+        """Sync entry point for the tool."""
+        return self._impl()
+
+    async def _arun(self) -> None:
+        """Async entry point for the tool."""
+        return self._impl()
+
+    @property
+    def name(self) -> str:
+        """The name of the tool."""
+        return self.tool_name
+
+    @property
+    def description(self) -> str:
+        """A brief description of the tool's functionality."""
+        return self.tool_description
+
+class ExcelWriteCellTool(BaseTool):
+    """Tool to modify Value of a cell."""
+
+    tool_name: ClassVar[str] = "excel_change_cell_value"
+    tool_description: ClassVar[
+        str] = """Modify value of a specific cell.  Ensure that sheet name and cell are provided as two parameters.
+                    :param sheet_name: The name of the sheet to capture the screenshot.
+                    :param cell: Cell address.
+                    :param value: New value to be written to the cell.
+        """
+
+    _excel_automation: ExcelAutomation = PrivateAttr()
+    _executor: ThreadPoolExecutor = PrivateAttr()
+
+    def __init__(self, excel_automation: ExcelAutomation, executor: ThreadPoolExecutor):
+        """Constructor accepts an ExcelAutomation instance and a ThreadPoolExecutor."""
+        super().__init__(name=self.tool_name, description=self.tool_description)
+        self._excel_automation = excel_automation
+        self._executor = executor
+
+    def _impl(self, sheet_name: str, cell: str, value: str) -> dict:
+        """Sync wrapper for the get_structure method."""
+        # Use the ThreadPoolExecutor to ensure that xlwings interacts with Excel in a separate thread
+        future = self._executor.submit(self._excel_automation.write_cell,sheet_name, cell,value)
+        return future.result()
+
+    def _run(self, sheet_name: str, cell: str,value:str) -> Any:
+        """Sync entry point for the tool."""
+        return self._impl(sheet_name, cell,value)
+
+    async def _arun(self, sheet_name: str, cell: str, value:str) -> Any:
+        """Async entry point for the tool."""
+        return self._impl(sheet_name, cell,value)
+
+    @property
+    def name(self) -> str:
+        """The name of the tool."""
+        return self.tool_name
+
+    @property
+    def description(self) -> str:
+        """A brief description of the tool's functionality."""
+        return self.tool_description
+
+
+class ExcelCellSearchTool(BaseTool):
+    """Tool to search for cell values in an Excel workbook."""
+
+    tool_name: ClassVar[str] = "excel_search_cell"
+    tool_description: ClassVar[str] = """Search for cells by exact or partial value. 
+    Parameters:
+      - value: The value to search for.
+      - sheet_name: The sheet to search in (optional).
+      - search_whole_workbook: Whether to search the whole workbook (default: False)."""
+
+    _excel_automation: ExcelAutomation = PrivateAttr()
+    _executor: ThreadPoolExecutor = PrivateAttr()
+
+    def __init__(self, excel_automation: ExcelAutomation, executor: ThreadPoolExecutor):
+        super().__init__(name=self.tool_name, description=self.tool_description)
+        self._excel_automation = excel_automation
+        self._executor = executor
+
+    def _impl(self, value: str, sheet_name: str = None, search_whole_workbook: bool = False) -> list[str]:
+        """Search for cells by exact or partial value."""
+        future = self._executor.submit(self._excel_automation.find_cells_by_value, value, sheet_name,
+                                       search_whole_workbook)
+        result = future.result()
+
+        if not result:
+            future_partial = self._executor.submit(self._excel_automation.find_cells_by_partial_value, value,
+                                                   sheet_name, search_whole_workbook)
+            result = future_partial.result()
+
+        return result
+
+    def _run(self, value: str, sheet_name: str = None, search_whole_workbook: bool = False) -> Any:
+        """Sync entry point for the tool."""
+        return self._impl(value, sheet_name, search_whole_workbook)
+
+    async def _arun(self, value: str, sheet_name: str = None, search_whole_workbook: bool = False) -> Any:
+        """Async entry point for the tool."""
+        return self._impl(value, sheet_name, search_whole_workbook)
+
+    @property
+    def name(self) -> str:
+        return self.tool_name
+
+    @property
+    def description(self) -> str:
         return self.tool_description

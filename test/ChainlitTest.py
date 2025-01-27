@@ -9,10 +9,10 @@ from langchain_openai import ChatOpenAI
 
 from ExcelTamer.ExcelTamerAgent.AgentBuilder import create_agent
 
-excel_path = "example.xlsx"
-
 llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0)
 
+#Do not open any specific Excel File, Work with currently open Excel Workbook
+excel_path = None
 agent = create_agent(excel_path, llm)
 
 
