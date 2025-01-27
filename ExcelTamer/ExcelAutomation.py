@@ -2,7 +2,7 @@ import xlwings as xw
 
 class ExcelAutomation:
     def __init__(self, file_path: str = None):
-        self.app = xw.App(visible=False)
+        self.app = xw.App(visible=True)
         self.wb = self.app.books.open(file_path) if file_path else self.app.books.add()
 
     def save(self, file_path: str = None) -> None:
@@ -43,7 +43,7 @@ class ExcelAutomation:
     def list_named_ranges(self) -> dict[str, str]:
         return {name.tool_name: name.refers_to_range.address for name in self.wb.names}
 
-    def capture_screenshot(self, sheet_name: str, output_path: str, cell_range: str = None) -> bool:
+    def capture_screenshot_png(self, sheet_name: str, output_path: str, cell_range: str = None) -> bool:
         try:
             #cell_range = None
             sheet = self.wb.sheets[sheet_name]
