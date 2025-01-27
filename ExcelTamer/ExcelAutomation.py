@@ -16,7 +16,7 @@ class ExcelAutomation:
         self.app.quit()
 
     def list_sheets(self) -> list[str]:
-        return [sheet.name for sheet in self.wb.sheets]
+        return [sheet.tool_name for sheet in self.wb.sheets]
 
     def add_sheet(self, sheet_name: str) -> None:
         self.wb.sheets.add(sheet_name)
@@ -41,7 +41,7 @@ class ExcelAutomation:
         sheet.range(cell).value = value
 
     def list_named_ranges(self) -> dict[str, str]:
-        return {name.name: name.refers_to_range.address for name in self.wb.names}
+        return {name.tool_name: name.refers_to_range.address for name in self.wb.names}
 
     def capture_screenshot(self, sheet_name: str, output_path: str, cell_range: str = None) -> bool:
         try:
@@ -70,7 +70,7 @@ class ExcelAutomation:
                     'Refers To': name.refers_to_range.address
                 })
             structure_info.append({
-                'Sheet Name': sheet.name,
+                'Sheet Name': sheet.tool_name,
                 'Rows': used_range.rows.count,
                 'Columns': used_range.columns.count,
                 'Range': used_range.address,
