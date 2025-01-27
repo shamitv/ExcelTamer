@@ -43,7 +43,7 @@ class ExcelAutomation:
     def list_named_ranges(self) -> dict[str, str]:
         return {name.tool_name: name.refers_to_range.address for name in self.wb.names}
 
-    def capture_screenshot(self, sheet_name: str, output_path: str, cell_range: str = None) -> bool:
+    def capture_screenshot_png(self, sheet_name: str, output_path: str, cell_range: str = None) -> bool:
         try:
             #cell_range = None
             sheet = self.wb.sheets[sheet_name]

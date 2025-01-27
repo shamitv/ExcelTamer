@@ -1,6 +1,21 @@
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
 import chainlit as cl
 
-from SimpleExcelAgent import agent
+from langchain_openai import ChatOpenAI
+
+from ExcelTamer.ExcelTamerAgent.AgentBuilder import create_agent
+
+excel_path = "example.xlsx"
+
+llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0)
+
+agent = create_agent(excel_path, llm)
+
+
 
 @cl.on_chat_start
 async def start():
