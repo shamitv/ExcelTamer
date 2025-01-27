@@ -41,8 +41,9 @@ class ExcelGetStructureTool(BaseTool):
 
     async def _get_structure_async(self) -> List[dict]:
         """Async wrapper for the get_structure method using ThreadPoolExecutor."""
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(self._executor, self._get_structure_sync)
+        #loop = asyncio.get_event_loop()
+        #return await loop.run_in_executor(self._executor, self._get_structure_sync)
+        return self._get_structure_sync()
 
     def _run(self, *args: Any, **kwargs: Any) -> Any:
         """Sync entry point for the tool."""
