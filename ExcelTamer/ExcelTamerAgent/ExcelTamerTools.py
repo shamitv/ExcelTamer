@@ -103,8 +103,6 @@ class ExcelCellValueTool(BaseTool):
             """A brief description of the tool's functionality."""
             return self.tool_description
 
-
-
 class ExcelAnalyzeImageTool(BaseTool):
     """Tool to analyze an image of an Excel sheet."""
 
@@ -331,4 +329,52 @@ class ExcelWriteCellTool(BaseTool):
     @property
     def description(self) -> str:
         """A brief description of the tool's functionality."""
+        return self.tool_description
+
+
+class ExcelCellSearchTool(BaseTool):
+    """Tool to search for cell values in an Excel workbook."""
+
+    tool_name: ClassVar[str] = "excel_search_cell"
+    tool_description: ClassVar[str] = """Search for cells by exact or partial value. 
+    Parameters:
+      - value: The value to search for.
+      - sheet_name: The sheet to search in (optional).
+      - search_whole_workbook: Whether to search the whole workbook (default: False)."""
+
+    _excel_automation: ExcelAutomation = PrivateAttr()
+    _executor: ThreadPoolExecutor = PrivateAttr()
+
+    def __init__(self, excel_automation: ExcelAutomation, executor: ThreadPoolExecutor):
+        super().__init__(name=self.tool_name, description=self.tool_description)
+        self._excel_automation = excel_automation
+        self._executor = executor
+
+    def _impl(self, value: str, sheet_name: str = None, search_whole_workbook: bool = False) -> list[str]:
+        """Search for cells by exact or partial value."""
+        future = self._executor.submit(self._excel_automation.find_cells_by_value, value, sheet_name,
+                                       search_whole_workbook)
+        result = future.result()
+
+        if not result:
+            future_partial = self._executor.submit(self._excel_automation.find_cells_by_partial_value, value,
+                                                   sheet_name, search_whole_workbook)
+            result = future_partial.result()
+
+        return result
+
+    def _run(self, value: str, sheet_name: str = None, search_whole_workbook: bool = False) -> Any:
+        """Sync entry point for the tool."""
+        return self._impl(value, sheet_name, search_whole_workbook)
+
+    async def _arun(self, value: str, sheet_name: str = None, search_whole_workbook: bool = False) -> Any:
+        """Async entry point for the tool."""
+        return self._impl(value, sheet_name, search_whole_workbook)
+
+    @property
+    def name(self) -> str:
+        return self.tool_name
+
+    @property
+    def description(self) -> str:
         return self.tool_description

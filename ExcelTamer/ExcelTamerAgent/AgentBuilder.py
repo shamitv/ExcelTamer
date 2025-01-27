@@ -6,7 +6,7 @@ from langchain_core.language_models import BaseChatModel
 
 from ExcelTamer.ExcelAutomation import ExcelAutomation
 from ExcelTamer.ExcelTamerAgent.ExcelTamerTools import ExcelGetStructureTool, ExcelCellValueTool, ExcelAnalyzeImageTool, \
-    ExcelSaveTool, ExcelCloseTool, ExcelWriteCellTool
+    ExcelSaveTool, ExcelCloseTool, ExcelWriteCellTool, ExcelCellSearchTool
 
 executor = None
 
@@ -35,7 +35,8 @@ def create_agent(excel_path: str, llm:BaseChatModel) :
             ExcelAnalyzeImageTool(excel_automation=excel, executor=executor, llm=llm),
             ExcelSaveTool(excel_automation=excel, executor=executor),
             ExcelCloseTool(excel_automation=excel, executor=executor),
-            ExcelWriteCellTool(excel_automation=excel, executor=executor)
+            ExcelWriteCellTool(excel_automation=excel, executor=executor),
+            ExcelCellSearchTool(excel_automation=excel, executor=executor),
         ],
         llm=llm,
         agent=AgentType.OPENAI_FUNCTIONS,
