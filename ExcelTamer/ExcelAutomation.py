@@ -120,6 +120,55 @@ class ExcelAutomation:
             print(f"Failed to capture screenshot: {e}")
             return False
 
+    def get_dataframe_with_excel_headers(sheet, cell_range):
+        """
+        Returns a DataFrame from the given xlwings sheet and cell_range.
+        The columns of the DataFrame are the actual Excel column letters
+        (e.g. I, J, K, ... AH). A 'RowNumber' column is added to reflect
+        actual Excel row indices.
+
+        :param sheet: An xlwings Sheet object.
+        :param cell_range: A string like 'I3:AH10', or any valid Excel range.
+        :return: pandas DataFrame
+        """
+        # Create an xlwings Range object based on the user-provided cell_range
+        rng = sheet.range(cell_range)  # e.g. "I3:AH10"
+
+        # Read the raw 2D list of values
+        data_2d = rng.value
+        if not data_2d:
+            return pd.DataFrame()  # Empty range => empty DataFrame
+
+        # Dimensions: number of rows/columns in the 2D data
+        row_count = rng.rows.count
+        col_count = rng.columns.count
+
+        # Excel's top-left row/col for the specified range
+        start_row = rng.row
+        start_col = rng.column
+
+        # 1) Build column labels from the top row of each column's address
+        #    For column c in [0..col_count-1], we parse e.g. "$I$3" -> "I".
+        columns_letters = []
+        for c_offset in range(col_count):
+            col_address = sheet.range((start_row, start_col + c_offset)).address
+            # col_address might look like "$I$3" => extract just the letters
+            letters = ''.join(ch for ch in col_address if ch.isalpha())
+            columns_letters.append(letters)
+
+        # 2) Build the 'RowNumber' list from start_row -> (start_row + row_count - 1)
+        row_numbers = list(range(start_row, start_row + row_count))
+
+        # 3) Create the DataFrame
+        df = pd.DataFrame(data_2d, columns=columns_letters)
+
+        # 4) Insert 'RowNumber' at the beginning
+        df.insert(0, "RowNumber", row_numbers)
+
+        return df
+
+
+
     def find_cells_by_value(self, value: str, sheet_name: str = None, search_whole_workbook: bool = False) -> list[str]:
         """
         Searches for all cells containing the specified value.
