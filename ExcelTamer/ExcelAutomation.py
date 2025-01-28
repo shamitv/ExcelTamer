@@ -53,50 +53,16 @@ class ExcelAutomation:
 
         Also adds a 'RowNumber' column with the actual Excel row indices.
         """
-        sheet = self.workbook[sheet_name]
+        sheet = self.wb[sheet_name]
 
         # If no specific range is given, default to entire used range.
         if cell_range is None:
-            max_row = sheet.max_row
-            max_col = sheet.max_column
-            cell_range = f"A1:{get_column_letter(max_col)}{max_row}"
+            cell_range = sheet.used_range.address
+            range = sheet.range(cell_range)
+        else:
+            range = sheet.range(cell_range)
 
-        # Example cell_range: "I3:AH10"
-        start_cell, end_cell = cell_range.split(":")
-        # Separate letters and numbers for start cell
-        start_col_letter = ''.join([c for c in start_cell if c.isalpha()])
-        start_row_number = int(''.join([c for c in start_cell if c.isdigit()]))
-        # Separate letters and numbers for end cell
-        end_col_letter = ''.join([c for c in end_cell if c.isalpha()])
-        end_row_number = int(''.join([c for c in end_cell if c.isdigit()]))
-
-        # Convert column letters to numeric indices
-        start_col_idx = column_index_from_string(start_col_letter)
-        end_col_idx = column_index_from_string(end_col_letter)
-
-        # Grab all cell values in the specified range
-        data = []
-        for row in sheet.iter_rows(
-                min_row=start_row_number,
-                max_row=end_row_number,
-                min_col=start_col_idx,
-                max_col=end_col_idx,
-                values_only=True
-        ):
-            data.append(row)
-
-        # Create column headers from Excel column letters: e.g. I, J, K...
-        columns = [
-            get_column_letter(col_idx)
-            for col_idx in range(start_col_idx, end_col_idx + 1)
-        ]
-
-        # Build DataFrame
-        df = pd.DataFrame(data, columns=columns)
-
-        # Prepend a 'RowNumber' column that matches the actual Excel row numbers
-        excel_row_nums = list(range(start_row_number, end_row_number + 1))
-        df.insert(0, 'RowNumber', excel_row_nums)
+        df = self.get_dataframe_with_excel_headers_impl(sheet,range)
 
         return df
 
@@ -120,7 +86,7 @@ class ExcelAutomation:
             print(f"Failed to capture screenshot: {e}")
             return False
 
-    def get_dataframe_with_excel_headers(sheet, cell_range):
+    def get_dataframe_with_excel_headers_impl(self, sheet: xw.Sheet, cell_range:xw.Range):
         """
         Returns a DataFrame from the given xlwings sheet and cell_range.
         The columns of the DataFrame are the actual Excel column letters
@@ -131,8 +97,8 @@ class ExcelAutomation:
         :param cell_range: A string like 'I3:AH10', or any valid Excel range.
         :return: pandas DataFrame
         """
-        # Create an xlwings Range object based on the user-provided cell_range
-        rng = sheet.range(cell_range)  # e.g. "I3:AH10"
+        # TO-DO: Remove this var and use cell_range directly
+        rng:xw.Range = cell_range  # e.g. "I3:AH10"
 
         # Read the raw 2D list of values
         data_2d = rng.value
