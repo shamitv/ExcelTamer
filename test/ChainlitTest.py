@@ -1,3 +1,10 @@
+import logging
+
+# Set the logging level to DEBUG
+logging.basicConfig(level=logging.DEBUG,
+    format='%(asctime)s - %(message)s',
+    datefmt='%d:%m:%Y %H:%M:%S')
+
 from dotenv import load_dotenv
 
 # Load environment variables from .env file

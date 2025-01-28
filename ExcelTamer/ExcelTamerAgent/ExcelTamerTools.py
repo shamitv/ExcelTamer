@@ -11,6 +11,7 @@ from pydantic import PrivateAttr
 from langchain.tools import BaseTool
 from ExcelTamer.ExcelAutomation import ExcelAutomation
 
+
 class ExcelGetStructureTool(BaseTool):
     """Tool to inspect the structure of an Excel workbook."""
 
@@ -339,7 +340,7 @@ class ExcelCellSearchTool(BaseTool):
     tool_description: ClassVar[str] = """Search for cells by exact or partial value. 
     Parameters:
       - value: The value to search for.
-      - sheet_name: The sheet to search in (optional).
+      - sheet_name: The sheet to search in.
       - search_whole_workbook: Whether to search the whole workbook (default: False)."""
 
     _excel_automation: ExcelAutomation = PrivateAttr()
@@ -389,6 +390,8 @@ class ExcelGetSheetOrRangeAsMarkdownTool(BaseTool):
         rather than the first row of data.
 
         Also adds a 'RowNumber' column with the actual Excel row indices.
+        
+        Note : DO NOT request large number of cells at a time. Limit to about 100 cells 
 
     :param sheet_name: The name of the sheet to capture the screenshot.
     :param cell_range: (optional) The range of cells to

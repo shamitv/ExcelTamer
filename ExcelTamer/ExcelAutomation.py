@@ -1,6 +1,17 @@
 import pandas as pd
 import xlwings as xw
 
+import logging
+from datetime import datetime
+
+# Configure logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(message)s',
+    datefmt='%d:%m:%Y %H:%M:%S'
+)
+
+
 class ExcelAutomation:
     def __init__(self, file_path: str = None):
         self.app = xw.apps.active if xw.apps else xw.App(visible=True)
@@ -47,6 +58,7 @@ class ExcelAutomation:
 
     def get_range_as_markdown(self, sheet_name: str, cell_range: str=None) -> str:
         df = self.get_range_as_dataframe(sheet_name, cell_range)
+
         return df.to_markdown(index=True)
 
     def get_range_as_dataframe(self, sheet_name, cell_range=None):
@@ -57,7 +69,13 @@ class ExcelAutomation:
 
         Also adds a 'RowNumber' column with the actual Excel row indices.
         """
+        logging.debug(f"Getting range as DataFrame for sheet: {sheet_name}, cell_range: {cell_range}")
+
         sheet = self.wb.sheets[sheet_name]
+
+        # If cell_range is empty or blank, treat it as None
+        if not cell_range or cell_range.strip() == "":
+            cell_range = None
 
         # If no specific range is given, default to entire used range.
         if cell_range is None:
@@ -138,6 +156,8 @@ class ExcelAutomation:
         return df
 
     def find_all_cells_by_value(self, value: str, sheet_name: str = None, search_whole_workbook: bool = False):
+        logging.debug(
+            f"Searching for cells with value '{value}' in sheet '{sheet_name}' (search whole workbook: {search_whole_workbook})")
         # If search_whole_workbook is True, search all sheets
         if search_whole_workbook:
             found_cells = []
@@ -155,12 +175,14 @@ class ExcelAutomation:
         return self.find_all_cells_in_sheet(sheet, value)
 
     def find_all_cells_in_sheet(self,sheet, value: str):
+        logging.debug(f"Searching for value '{value}' in sheet '{sheet.name}'")
         # Search in the default range (A1:Z1000)
         search_range = sheet.range('A1:Z1000')
 
-        first_found = search_range.find(value)
+        first_found = search_range.api.find(value)
 
         if not first_found:
+            logging.debug(f"No match found for value '{value}' in sheet '{sheet.name}'")
             return []  # No match found
 
         # Store the first match
@@ -173,6 +195,7 @@ class ExcelAutomation:
             found_cells.append((next_found.row, next_found.column))
             next_found = search_range.api.find(value, after=next_found)
 
+        logging.debug(f"Found {len(found_cells)} cells with value '{value}' in sheet '{sheet.name}'")
         return found_cells
 
 
