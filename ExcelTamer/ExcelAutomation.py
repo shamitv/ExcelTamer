@@ -137,6 +137,44 @@ class ExcelAutomation:
 
         return df
 
+    def find_all_cells_by_value(self, value: str, sheet_name: str = None, search_whole_workbook: bool = False):
+        # If search_whole_workbook is True, search all sheets
+        if search_whole_workbook:
+            found_cells = []
+            for sheet in self.wb.sheets:
+                found_cells += self.find_all_cells_in_sheet(sheet, value)
+            return found_cells
+
+        # If sheet_name is provided, search within that sheet
+        if sheet_name:
+            sheet = self.wb.sheets[sheet_name]
+        else:
+            # Use the active sheet if no sheet_name is provided
+            sheet = self.wb.sheets.active
+
+        return self.find_all_cells_in_sheet(sheet, value)
+
+    def find_all_cells_in_sheet(self,sheet, value: str):
+        # Search in the default range (A1:Z1000)
+        search_range = sheet.range('A1:Z1000')
+
+        first_found = search_range.find(value)
+
+        if not first_found:
+            return []  # No match found
+
+        # Store the first match
+        found_cells = [(first_found.row, first_found.column)]
+
+        # Start from the cell after the first match and continue searching
+        next_found = search_range.find(value, after=first_found)
+
+        while next_found:
+            found_cells.append((next_found.row, next_found.column))
+            next_found = search_range.find(value, after=next_found)
+
+        return found_cells
+
 
 
     def find_cells_by_value(self, value: str, sheet_name: str = None, search_whole_workbook: bool = False) -> list[str]:

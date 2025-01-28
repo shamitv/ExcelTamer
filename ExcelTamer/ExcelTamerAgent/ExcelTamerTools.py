@@ -352,7 +352,7 @@ class ExcelCellSearchTool(BaseTool):
 
     def _impl(self, value: str, sheet_name: str = None, search_whole_workbook: bool = False) -> list[str]:
         """Search for cells by exact or partial value."""
-        future = self._executor.submit(self._excel_automation.find_cells_by_value, value, sheet_name,
+        future = self._executor.submit(self._excel_automation.find_all_cells_by_value, value, sheet_name,
                                        search_whole_workbook)
         result = future.result()
 
