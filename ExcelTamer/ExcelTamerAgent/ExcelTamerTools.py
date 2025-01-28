@@ -378,3 +378,43 @@ class ExcelCellSearchTool(BaseTool):
     @property
     def description(self) -> str:
         return self.tool_description
+
+
+class ExcelGetSheetOrRangeAsMarkdownTool(BaseTool):
+    """Tool to extract a range or Sheet as a Table in Mardown Format."""
+
+    tool_name: ClassVar[str] = "excel_range_or_sheet_as_markdown"
+    tool_description: ClassVar[str] ="""Returns a Text (Markdown) representation of data from the specified sheet and range.
+        Columns headers are the Excel column letters (I, J, K, etc.)
+        rather than the first row of data.
+
+        Also adds a 'RowNumber' column with the actual Excel row indices.
+
+    :param sheet_name: The name of the sheet to capture the screenshot.
+    :param cell_range: (optional) The range of cells to
+                capture the screenshot. Screenshot of whole sheet is captured if this parameter is not provided.
+    :return: Markdown Table.
+    """
+
+    _excel_automation: ExcelAutomation = PrivateAttr()
+    _executor: ThreadPoolExecutor = PrivateAttr()
+
+    def __init__(self, excel_automation: ExcelAutomation, executor: ThreadPoolExecutor):
+        """Constructor accepts an image path and a ThreadPoolExecutor."""
+        super().__init__(name=self.tool_name, description=self.tool_description)
+        self._executor = executor
+        self._excel_automation = excel_automation
+
+    def _impl(self, sheet_name: str, cell_range: str) -> dict:
+        """Sync wrapper for the get_structure method."""
+        # Use the ThreadPoolExecutor to ensure that xlwings interacts with Excel in a separate thread
+        future = self._executor.submit(self._excel_automation.get_range_as_markdown,sheet_name, cell_range)
+        return future.result()
+
+    def _run(self, sheet_name: str, cell_range: str) -> Any:
+        """Sync entry point for the tool."""
+        return self._impl(sheet_name, cell_range)
+
+    async def _arun(self, sheet_name: str, cell_range: str) -> Any:
+        """Async entry point for the tool."""
+        return self._impl(sheet_name, cell_range)
