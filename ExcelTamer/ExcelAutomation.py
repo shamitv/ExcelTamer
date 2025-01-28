@@ -1,3 +1,4 @@
+import pandas as pd
 import xlwings as xw
 
 class ExcelAutomation:
@@ -43,6 +44,61 @@ class ExcelAutomation:
         value = sheet.range(cell).value
         formula = sheet.range(cell).formula
         return {'Value': value, 'Formula': formula}
+
+    def get_dataframe_with_excel_headers(self, sheet_name, cell_range=None):
+        """
+        Returns a pandas DataFrame from the specified sheet and range.
+        The DataFrame columns are the Excel column letters (I, J, K, etc.)
+        rather than the first row of data.
+
+        Also adds a 'RowNumber' column with the actual Excel row indices.
+        """
+        sheet = self.workbook[sheet_name]
+
+        # If no specific range is given, default to entire used range.
+        if cell_range is None:
+            max_row = sheet.max_row
+            max_col = sheet.max_column
+            cell_range = f"A1:{get_column_letter(max_col)}{max_row}"
+
+        # Example cell_range: "I3:AH10"
+        start_cell, end_cell = cell_range.split(":")
+        # Separate letters and numbers for start cell
+        start_col_letter = ''.join([c for c in start_cell if c.isalpha()])
+        start_row_number = int(''.join([c for c in start_cell if c.isdigit()]))
+        # Separate letters and numbers for end cell
+        end_col_letter = ''.join([c for c in end_cell if c.isalpha()])
+        end_row_number = int(''.join([c for c in end_cell if c.isdigit()]))
+
+        # Convert column letters to numeric indices
+        start_col_idx = column_index_from_string(start_col_letter)
+        end_col_idx = column_index_from_string(end_col_letter)
+
+        # Grab all cell values in the specified range
+        data = []
+        for row in sheet.iter_rows(
+                min_row=start_row_number,
+                max_row=end_row_number,
+                min_col=start_col_idx,
+                max_col=end_col_idx,
+                values_only=True
+        ):
+            data.append(row)
+
+        # Create column headers from Excel column letters: e.g. I, J, K...
+        columns = [
+            get_column_letter(col_idx)
+            for col_idx in range(start_col_idx, end_col_idx + 1)
+        ]
+
+        # Build DataFrame
+        df = pd.DataFrame(data, columns=columns)
+
+        # Prepend a 'RowNumber' column that matches the actual Excel row numbers
+        excel_row_nums = list(range(start_row_number, end_row_number + 1))
+        df.insert(0, 'RowNumber', excel_row_nums)
+
+        return df
 
     def write_cell(self, sheet_name: str, cell: str, value: any) -> None:
         sheet = self.wb.sheets[sheet_name]
