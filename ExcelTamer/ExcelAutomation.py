@@ -167,11 +167,11 @@ class ExcelAutomation:
         found_cells = [(first_found.row, first_found.column)]
 
         # Start from the cell after the first match and continue searching
-        next_found = search_range.find(value, after=first_found)
+        next_found = search_range.api.find(value, after=first_found)
 
         while next_found:
             found_cells.append((next_found.row, next_found.column))
-            next_found = search_range.find(value, after=next_found)
+            next_found = search_range.api.find(value, after=next_found)
 
         return found_cells
 
