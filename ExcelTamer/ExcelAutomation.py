@@ -45,7 +45,11 @@ class ExcelAutomation:
         formula = sheet.range(cell).formula
         return {'Value': value, 'Formula': formula}
 
-    def get_dataframe_with_excel_headers(self, sheet_name, cell_range=None):
+    def get_range_as_markdown(self, sheet_name: str, cell_range: str=None) -> str:
+        df = self.get_range_as_dataframe(sheet_name, cell_range)
+        return df.to_markdown(index=True)
+
+    def get_range_as_dataframe(self, sheet_name, cell_range=None):
         """
         Returns a pandas DataFrame from the specified sheet and range.
         The DataFrame columns are the Excel column letters (I, J, K, etc.)
@@ -53,7 +57,7 @@ class ExcelAutomation:
 
         Also adds a 'RowNumber' column with the actual Excel row indices.
         """
-        sheet = self.wb[sheet_name]
+        sheet = self.wb.sheets[sheet_name]
 
         # If no specific range is given, default to entire used range.
         if cell_range is None:
