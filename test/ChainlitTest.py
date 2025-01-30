@@ -1,6 +1,7 @@
 import logging
 import chainlit as cl
 from dotenv import load_dotenv
+from langchain_core.runnables import RunnableConfig
 
 # Set the logging level to DEBUG
 logging.basicConfig(
@@ -49,17 +50,10 @@ async def handle_message(message):
     agent_inst = cl.user_session.get("agent")
 
     # Run the agent asynchronously
-    result = await agent_inst.ainvoke({"input": message.content},callbacks=[callback_handler])
+    result = await agent_inst.ainvoke({"input": message.content},
+                                      config=RunnableConfig(callbacks=[cl.LangchainCallbackHandler()]))
 
-    # Extract and display intermediate steps
-    intermediate_steps = result.get("intermediate_steps", [])
-    for action, observation in intermediate_steps:
-        # Display the action taken by the agent
-        await cl.Message(content=f"Action: {action.tool}\nInput: {action.tool_input}").send()
-        # Display the observation received from the tool
-        await cl.Message(content=f"Observation: {observation}").send()
-
-   # Send back the agent's response
+  # Send back the agent's response
     await cl.Message(content=result["output"]).send()
 
 
