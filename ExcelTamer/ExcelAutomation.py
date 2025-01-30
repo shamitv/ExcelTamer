@@ -174,68 +174,27 @@ class ExcelAutomation:
 
         return self.find_all_cells_in_sheet(sheet, value)
 
-    def find_all_cells_in_sheet(self,sheet, value: str):
+    def find_all_cells_in_sheet(self, sheet, value: str) -> list[tuple[str, str, int]]:
         logging.debug(f"Searching for value '{value}' in sheet '{sheet.name}'")
-        # Search in the default range (A1:Z1000)
-        search_range = sheet.range('A1:Z1000')
 
-        first_found = search_range.api.find(value)
+        search_range = sheet.used_range
 
-        if not first_found:
-            logging.debug(f"No match found for value '{value}' in sheet '{sheet.name}'")
-            return []  # No match found
+        # Get DataFrame from the specified range
+        df = self.get_dataframe_with_excel_headers_impl(sheet, search_range)
 
-        # Store the first match
-        found_cells = [(first_found.row, first_found.column)]
+        # Find all cells with the specified value
+        found_cells = df[df.isin([value])].stack().index.tolist()
 
-        # Start from the cell after the first match and continue searching
-        next_found = search_range.api.find(value, after=first_found)
+        # Convert the DataFrame index to Excel row and column indices
+        found_cells = [(sheet.name, df.columns.get_loc(col) + 1, int(df.at[row, 'RowNumber'])) for row, col in
+                       found_cells]
 
-        while next_found:
-            found_cells.append((next_found.row, next_found.column))
-            next_found = search_range.api.find(value, after=next_found)
+        # Convert column indices to Excel column letters
+        found_cells = [(sheet_name, df.columns[col - 1], row) for sheet_name, col, row in found_cells]
 
         logging.debug(f"Found {len(found_cells)} cells with value '{value}' in sheet '{sheet.name}'")
         return found_cells
 
-
-
-    def find_cells_by_value(self, value: str, sheet_name: str = None, search_whole_workbook: bool = False) -> list[str]:
-        """
-        Searches for all cells containing the specified value.
-
-        :param value: The value to search for.
-        :param sheet_name: The name of the sheet to search in (optional, searches active sheet if not provided).
-        :param search_whole_workbook: Boolean flag to search across all sheets or just one.
-        :return: A list of cell addresses containing the value.
-        """
-        found_cells = []
-        sheets = self.wb.sheets if search_whole_workbook else [
-            self.wb.sheets[sheet_name] if sheet_name else self.wb.sheets.active]
-        for sheet in sheets:
-            for cell in sheet.used_range:
-                if cell.value == value:
-                    found_cells.append(f"{sheet.name}!{cell.address}")
-        return found_cells
-
-    def find_cells_by_partial_value(self, value: str, sheet_name: str = None, search_whole_workbook: bool = False) -> \
-    list[str]:
-        """
-        Searches for all cells containing the specified partial value.
-
-        :param value: The substring to search for within cells.
-        :param sheet_name: The name of the sheet to search in (optional, searches active sheet if not provided).
-        :param search_whole_workbook: Boolean flag to search across all sheets or just one.
-        :return: A list of cell addresses containing the partial value.
-        """
-        found_cells = []
-        sheets = self.wb.sheets if search_whole_workbook else [
-            self.wb.sheets[sheet_name] if sheet_name else self.wb.sheets.active]
-        for sheet in sheets:
-            for cell in sheet.used_range:
-                if isinstance(cell.value, str) and value in cell.value:
-                    found_cells.append(f"{sheet.name}!{cell.address}")
-        return found_cells
 
     def get_structure(self):
         """Return the structure of the workbook."""
