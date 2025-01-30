@@ -357,10 +357,6 @@ class ExcelCellSearchTool(BaseTool):
                                        search_whole_workbook)
         result = future.result()
 
-        if not result:
-            future_partial = self._executor.submit(self._excel_automation.find_cells_by_partial_value, value,
-                                                   sheet_name, search_whole_workbook)
-            result = future_partial.result()
 
         return result
 
@@ -392,6 +388,7 @@ class ExcelGetSheetOrRangeAsMarkdownTool(BaseTool):
         Also adds a 'RowNumber' column with the actual Excel row indices.
         
         Note : DO NOT request large number of cells at a time. Limit to about 100 cells 
+        Note : At least 2 rows data should be extracted to get the column headers.
 
     :param sheet_name: The name of the sheet to capture the screenshot.
     :param cell_range: (optional) The range of cells to
@@ -422,55 +419,55 @@ class ExcelGetSheetOrRangeAsMarkdownTool(BaseTool):
         """Async entry point for the tool."""
         return self._impl(sheet_name, cell_range)
 
-    class ExcelFindMetricValueTool(BaseTool):
-        """Tool to find a financial metric value for a given time period in an Excel sheet."""
+class ExcelFindMetricValueTool(BaseTool):
+    """Tool to find a financial metric value for a given time period in an Excel sheet."""
 
-        tool_name: ClassVar[str] = "excel_find_metric_value"
-        tool_description: ClassVar[str] = """Find value of a temporal metric for a given time period in an Excel sheet.
-        Parameters:
-          - sheet_name: The name of the sheet to search in.
-          - metric_name: The name of the financial metric (e.g., "Net Income").
-          - time_period: The time period (e.g., "2023" or "Q3").
-        Returns A dictionary with:
-                 - 'Error': An error message if no matches are found (empty string if no error).
-                 - 'Cells': A list of dictionaries, each containing:
-                    - 'Cell': The cell address where the metric's value is located.
-                    - 'Value': The actual numeric value of the metric.
-                    - 'Formula': The formula (if any) present in the cell.
-                    - 'VisibleText': The visible text of the cell.
-                    - 'Row': The row index where the metric was found.
-                    - 'Column': The column where the time period was found.
-        """
+    tool_name: ClassVar[str] = "excel_find_metric_value"
+    tool_description: ClassVar[str] = """Find value of a temporal metric for a given time period in an Excel sheet.
+    Parameters:
+      - sheet_name: The name of the sheet to search in.
+      - metric_name: The name of the financial metric (e.g., "Net Income").
+      - time_period: The time period (e.g., "2023" or "Q3").
+    Returns A dictionary with:
+             - 'Error': An error message if no matches are found (empty string if no error).
+             - 'Cells': A list of dictionaries, each containing:
+                - 'Cell': The cell address where the metric's value is located.
+                - 'Value': The actual numeric value of the metric.
+                - 'Formula': The formula (if any) present in the cell.
+                - 'VisibleText': The visible text of the cell.
+                - 'Row': The row index where the metric was found.
+                - 'Column': The column where the time period was found.
+    """
 
-        _excel_automation: ExcelAutomation = PrivateAttr()
-        _executor: ThreadPoolExecutor = PrivateAttr()
+    _excel_automation: ExcelAutomation = PrivateAttr()
+    _executor: ThreadPoolExecutor = PrivateAttr()
 
-        def __init__(self, excel_automation: ExcelAutomation, executor: ThreadPoolExecutor):
-            """Constructor accepts an ExcelAutomation instance and a ThreadPoolExecutor."""
-            super().__init__(name=self.tool_name, description=self.tool_description)
-            self._excel_automation = excel_automation
-            self._executor = executor
+    def __init__(self, excel_automation: ExcelAutomation, executor: ThreadPoolExecutor):
+        """Constructor accepts an ExcelAutomation instance and a ThreadPoolExecutor."""
+        super().__init__(name=self.tool_name, description=self.tool_description)
+        self._excel_automation = excel_automation
+        self._executor = executor
 
-        def _impl(self, sheet_name: str, metric_name: str, time_period: str) -> Dict[str, Any]:
-            """Sync wrapper for the find_metric_value method."""
-            future = self._executor.submit(self._excel_automation.find_metric_value, sheet_name, metric_name,
-                                           time_period)
-            return future.result()
+    def _impl(self, sheet_name: str, metric_name: str, time_period: str) -> Dict[str, Any]:
+        """Sync wrapper for the find_metric_value method."""
+        future = self._executor.submit(self._excel_automation.find_metric_value, sheet_name, metric_name,
+                                       time_period)
+        return future.result()
 
-        def _run(self, sheet_name: str, metric_name: str, time_period: str) -> Any:
-            """Sync entry point for the tool."""
-            return self._impl(sheet_name, metric_name, time_period)
+    def _run(self, sheet_name: str, metric_name: str, time_period: str) -> Any:
+        """Sync entry point for the tool."""
+        return self._impl(sheet_name, metric_name, time_period)
 
-        async def _arun(self, sheet_name: str, metric_name: str, time_period: str) -> Any:
-            """Async entry point for the tool."""
-            return self._impl(sheet_name, metric_name, time_period)
+    async def _arun(self, sheet_name: str, metric_name: str, time_period: str) -> Any:
+        """Async entry point for the tool."""
+        return self._impl(sheet_name, metric_name, time_period)
 
-        @property
-        def name(self) -> str:
-            """The name of the tool."""
-            return self.tool_name
+    @property
+    def name(self) -> str:
+        """The name of the tool."""
+        return self.tool_name
 
-        @property
-        def description(self) -> str:
-            """A brief description of the tool's functionality."""
-            return self.tool_description
+    @property
+    def description(self) -> str:
+        """A brief description of the tool's functionality."""
+        return self.tool_description
