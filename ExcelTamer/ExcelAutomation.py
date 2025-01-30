@@ -54,7 +54,8 @@ class ExcelAutomation:
         sheet = self.wb.sheets[sheet_name]
         value = sheet.range(cell).value
         formula = sheet.range(cell).formula
-        return {'Value': value, 'Formula': formula}
+        visible_text = sheet.range(cell).api.Text
+        return {'Value': value, 'Formula': formula, 'VisibleText': visible_text}
 
     def get_range_as_markdown(self, sheet_name: str, cell_range: str=None) -> str:
         df = self.get_range_as_dataframe(sheet_name, cell_range)
@@ -194,6 +195,76 @@ class ExcelAutomation:
 
         logging.debug(f"Found {len(found_cells)} cells with value '{value}' in sheet '{sheet.name}'")
         return found_cells
+
+    #def find_all_cells_by_formula(self, formula: str, sheet_name: str = None, search_whole_workbook: bool = False):
+
+    def find_metric_value(self, sheet_name: str, metric_name: str, time_period: str) -> dict:
+        """
+        Finds all occurrences of a financial metric for a given time period, accounting for cases where the metric appears multiple times.
+
+        :param sheet_name: The name of the Excel sheet.
+        :param metric_name: The name of the financial metric (e.g., "Net Income").
+        :param time_period: The time period (e.g., "2023" or "Q3").
+        :return: A dictionary with:
+                 - 'Error': An error message if no matches are found (empty string if no error).
+                 - 'Cells': A list of dictionaries, each containing:
+                    - 'Cell': The cell address where the metric's value is located.
+                    - 'Value': The actual numeric value of the metric.
+                    - 'Formula': The formula (if any) present in the cell.
+                    - 'VisibleText': The visible text of the cell.
+                    - 'Row': The row index where the metric was found.
+                    - 'Column': The column where the time period was found.
+        """
+        logging.debug(f"Finding metric '{metric_name}' for time period '{time_period}' in sheet '{sheet_name}'")
+
+        # Get the sheet object
+        sheet = self.wb.sheets[sheet_name]
+
+        # Step 1: Find all occurrences of the metric in the sheet
+        logging.debug(f"Searching for metric '{metric_name}' in sheet '{sheet_name}'")
+        metric_cells = self.find_all_cells_in_sheet(sheet, metric_name)
+        if not metric_cells:
+            return {"Error": f"Metric '{metric_name}' not found in sheet '{sheet_name}'.", "Cells": []}
+
+        # Step 2: Find all occurrences of the time period in the sheet
+        logging.debug(f"Searching for time period '{time_period}' in sheet '{sheet_name}'")
+        time_period_cells = self.find_all_cells_in_sheet(sheet, time_period)
+        if not time_period_cells:
+            return {"Error": f"Time period '{time_period}' not found in sheet '{sheet_name}'.", "Cells": []}
+
+        results = []
+
+        # Step 3: Identify all intersection points (possible metric occurrences matching a time period)
+        logging.debug(f"Identifying intersection points for metric '{metric_name}' and time period '{time_period}'")
+        for metric_cell in metric_cells:
+            metric_row = metric_cell[2]  # Extract row number of metric
+
+            for time_cell in time_period_cells:
+                time_col = time_cell[1]  # Extract column letter of time period
+
+                # Construct the cell address where the metric value should be
+                value_cell = f"{time_col}{metric_row}"
+
+                # Retrieve value, formula, and visible text from the cell
+                cell_data = self.query_cell(sheet_name, value_cell)
+
+                # Store the result if it contains a value
+                if cell_data.get("Value") is not None:
+                    results.append({
+                        "Cell": value_cell,
+                        "Value": cell_data.get("Value"),
+                        "Formula": cell_data.get("Formula"),
+                        "VisibleText": cell_data.get("VisibleText"),
+                        "Row": metric_row,
+                        "Column": time_col
+                    })
+
+        # Return the structured result
+        return {
+            "Error": "" if results else f"No values found for '{metric_name}' in '{time_period}' in sheet '{sheet_name}'.",
+            "Cells": results
+        }
+
 
 
     def get_structure(self):
