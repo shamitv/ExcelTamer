@@ -9,3 +9,4 @@ langchain-openai~=0.3.2
 Pillow
 chainlit~=2.0.601
 pydantic~=2.10.6
+tabulate

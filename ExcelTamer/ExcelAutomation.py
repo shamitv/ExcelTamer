@@ -1,4 +1,16 @@
+import pandas as pd
 import xlwings as xw
+
+import logging
+from datetime import datetime
+
+# Configure logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(message)s',
+    datefmt='%d:%m:%Y %H:%M:%S'
+)
+
 
 class ExcelAutomation:
     def __init__(self, file_path: str = None):
@@ -44,6 +56,38 @@ class ExcelAutomation:
         formula = sheet.range(cell).formula
         return {'Value': value, 'Formula': formula}
 
+    def get_range_as_markdown(self, sheet_name: str, cell_range: str=None) -> str:
+        df = self.get_range_as_dataframe(sheet_name, cell_range)
+
+        return df.to_markdown(index=True)
+
+    def get_range_as_dataframe(self, sheet_name, cell_range=None):
+        """
+        Returns a pandas DataFrame from the specified sheet and range.
+        The DataFrame columns are the Excel column letters (I, J, K, etc.)
+        rather than the first row of data.
+
+        Also adds a 'RowNumber' column with the actual Excel row indices.
+        """
+        logging.debug(f"Getting range as DataFrame for sheet: {sheet_name}, cell_range: {cell_range}")
+
+        sheet = self.wb.sheets[sheet_name]
+
+        # If cell_range is empty or blank, treat it as None
+        if not cell_range or cell_range.strip() == "":
+            cell_range = None
+
+        # If no specific range is given, default to entire used range.
+        if cell_range is None:
+            cell_range = sheet.used_range.address
+            range = sheet.range(cell_range)
+        else:
+            range = sheet.range(cell_range)
+
+        df = self.get_dataframe_with_excel_headers_impl(sheet,range)
+
+        return df
+
     def write_cell(self, sheet_name: str, cell: str, value: any) -> None:
         sheet = self.wb.sheets[sheet_name]
         sheet.range(cell).value = value
@@ -64,42 +108,93 @@ class ExcelAutomation:
             print(f"Failed to capture screenshot: {e}")
             return False
 
-    def find_cells_by_value(self, value: str, sheet_name: str = None, search_whole_workbook: bool = False) -> list[str]:
+    def get_dataframe_with_excel_headers_impl(self, sheet: xw.Sheet, cell_range:xw.Range):
         """
-        Searches for all cells containing the specified value.
+        Returns a DataFrame from the given xlwings sheet and cell_range.
+        The columns of the DataFrame are the actual Excel column letters
+        (e.g. I, J, K, ... AH). A 'RowNumber' column is added to reflect
+        actual Excel row indices.
 
-        :param value: The value to search for.
-        :param sheet_name: The name of the sheet to search in (optional, searches active sheet if not provided).
-        :param search_whole_workbook: Boolean flag to search across all sheets or just one.
-        :return: A list of cell addresses containing the value.
+        :param sheet: An xlwings Sheet object.
+        :param cell_range: A string like 'I3:AH10', or any valid Excel range.
+        :return: pandas DataFrame
         """
-        found_cells = []
-        sheets = self.wb.sheets if search_whole_workbook else [
-            self.wb.sheets[sheet_name] if sheet_name else self.wb.sheets.active]
-        for sheet in sheets:
-            for cell in sheet.used_range:
-                if cell.value == value:
-                    found_cells.append(f"{sheet.name}!{cell.address}")
+        # TO-DO: Remove this var and use cell_range directly
+        rng:xw.Range = cell_range  # e.g. "I3:AH10"
+
+        # Read the raw 2D list of values
+        data_2d = rng.value
+        if not data_2d:
+            return pd.DataFrame()  # Empty range => empty DataFrame
+
+        # Dimensions: number of rows/columns in the 2D data
+        row_count = rng.rows.count
+        col_count = rng.columns.count
+
+        # Excel's top-left row/col for the specified range
+        start_row = rng.row
+        start_col = rng.column
+
+        # 1) Build column labels from the top row of each column's address
+        #    For column c in [0..col_count-1], we parse e.g. "$I$3" -> "I".
+        columns_letters = []
+        for c_offset in range(col_count):
+            col_address = sheet.range((start_row, start_col + c_offset)).address
+            # col_address might look like "$I$3" => extract just the letters
+            letters = ''.join(ch for ch in col_address if ch.isalpha())
+            columns_letters.append(letters)
+
+        # 2) Build the 'RowNumber' list from start_row -> (start_row + row_count - 1)
+        row_numbers = list(range(start_row, start_row + row_count))
+
+        # 3) Create the DataFrame
+        df = pd.DataFrame(data_2d, columns=columns_letters)
+
+        # 4) Insert 'RowNumber' at the beginning
+        df.insert(0, "RowNumber", row_numbers)
+
+        return df
+
+    def find_all_cells_by_value(self, value: str, sheet_name: str = None, search_whole_workbook: bool = False):
+        logging.debug(
+            f"Searching for cells with value '{value}' in sheet '{sheet_name}' (search whole workbook: {search_whole_workbook})")
+        # If search_whole_workbook is True, search all sheets
+        if search_whole_workbook:
+            found_cells = []
+            for sheet in self.wb.sheets:
+                found_cells += self.find_all_cells_in_sheet(sheet, value)
+            return found_cells
+
+        # If sheet_name is provided, search within that sheet
+        if sheet_name:
+            sheet = self.wb.sheets[sheet_name]
+        else:
+            # Use the active sheet if no sheet_name is provided
+            sheet = self.wb.sheets.active
+
+        return self.find_all_cells_in_sheet(sheet, value)
+
+    def find_all_cells_in_sheet(self, sheet, value: str) -> list[tuple[str, str, int]]:
+        logging.debug(f"Searching for value '{value}' in sheet '{sheet.name}'")
+
+        search_range = sheet.used_range
+
+        # Get DataFrame from the specified range
+        df = self.get_dataframe_with_excel_headers_impl(sheet, search_range)
+
+        # Find all cells with the specified value
+        found_cells = df[df.isin([value])].stack().index.tolist()
+
+        # Convert the DataFrame index to Excel row and column indices
+        found_cells = [(sheet.name, df.columns.get_loc(col) + 1, int(df.at[row, 'RowNumber'])) for row, col in
+                       found_cells]
+
+        # Convert column indices to Excel column letters
+        found_cells = [(sheet_name, df.columns[col - 1], row) for sheet_name, col, row in found_cells]
+
+        logging.debug(f"Found {len(found_cells)} cells with value '{value}' in sheet '{sheet.name}'")
         return found_cells
 
-    def find_cells_by_partial_value(self, value: str, sheet_name: str = None, search_whole_workbook: bool = False) -> \
-    list[str]:
-        """
-        Searches for all cells containing the specified partial value.
-
-        :param value: The substring to search for within cells.
-        :param sheet_name: The name of the sheet to search in (optional, searches active sheet if not provided).
-        :param search_whole_workbook: Boolean flag to search across all sheets or just one.
-        :return: A list of cell addresses containing the partial value.
-        """
-        found_cells = []
-        sheets = self.wb.sheets if search_whole_workbook else [
-            self.wb.sheets[sheet_name] if sheet_name else self.wb.sheets.active]
-        for sheet in sheets:
-            for cell in sheet.used_range:
-                if isinstance(cell.value, str) and value in cell.value:
-                    found_cells.append(f"{sheet.name}!{cell.address}")
-        return found_cells
 
     def get_structure(self):
         """Return the structure of the workbook."""

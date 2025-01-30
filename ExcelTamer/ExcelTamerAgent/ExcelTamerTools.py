@@ -11,6 +11,7 @@ from pydantic import PrivateAttr
 from langchain.tools import BaseTool
 from ExcelTamer.ExcelAutomation import ExcelAutomation
 
+
 class ExcelGetStructureTool(BaseTool):
     """Tool to inspect the structure of an Excel workbook."""
 
@@ -339,7 +340,7 @@ class ExcelCellSearchTool(BaseTool):
     tool_description: ClassVar[str] = """Search for cells by exact or partial value. 
     Parameters:
       - value: The value to search for.
-      - sheet_name: The sheet to search in (optional).
+      - sheet_name: The sheet to search in.
       - search_whole_workbook: Whether to search the whole workbook (default: False)."""
 
     _excel_automation: ExcelAutomation = PrivateAttr()
@@ -352,7 +353,7 @@ class ExcelCellSearchTool(BaseTool):
 
     def _impl(self, value: str, sheet_name: str = None, search_whole_workbook: bool = False) -> list[str]:
         """Search for cells by exact or partial value."""
-        future = self._executor.submit(self._excel_automation.find_cells_by_value, value, sheet_name,
+        future = self._executor.submit(self._excel_automation.find_all_cells_by_value, value, sheet_name,
                                        search_whole_workbook)
         result = future.result()
 
@@ -378,3 +379,45 @@ class ExcelCellSearchTool(BaseTool):
     @property
     def description(self) -> str:
         return self.tool_description
+
+
+class ExcelGetSheetOrRangeAsMarkdownTool(BaseTool):
+    """Tool to extract a range or Sheet as a Table in Mardown Format."""
+
+    tool_name: ClassVar[str] = "excel_range_or_sheet_as_markdown"
+    tool_description: ClassVar[str] ="""Returns a Text (Markdown) representation of data from the specified sheet and range.
+        Columns headers are the Excel column letters (I, J, K, etc.)
+        rather than the first row of data.
+
+        Also adds a 'RowNumber' column with the actual Excel row indices.
+        
+        Note : DO NOT request large number of cells at a time. Limit to about 100 cells 
+
+    :param sheet_name: The name of the sheet to capture the screenshot.
+    :param cell_range: (optional) The range of cells to
+                capture the screenshot. Screenshot of whole sheet is captured if this parameter is not provided.
+    :return: Markdown Table.
+    """
+
+    _excel_automation: ExcelAutomation = PrivateAttr()
+    _executor: ThreadPoolExecutor = PrivateAttr()
+
+    def __init__(self, excel_automation: ExcelAutomation, executor: ThreadPoolExecutor):
+        """Constructor accepts an image path and a ThreadPoolExecutor."""
+        super().__init__(name=self.tool_name, description=self.tool_description)
+        self._executor = executor
+        self._excel_automation = excel_automation
+
+    def _impl(self, sheet_name: str, cell_range: str) -> dict:
+        """Sync wrapper for the get_structure method."""
+        # Use the ThreadPoolExecutor to ensure that xlwings interacts with Excel in a separate thread
+        future = self._executor.submit(self._excel_automation.get_range_as_markdown,sheet_name, cell_range)
+        return future.result()
+
+    def _run(self, sheet_name: str, cell_range: str) -> Any:
+        """Sync entry point for the tool."""
+        return self._impl(sheet_name, cell_range)
+
+    async def _arun(self, sheet_name: str, cell_range: str) -> Any:
+        """Async entry point for the tool."""
+        return self._impl(sheet_name, cell_range)
