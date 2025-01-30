@@ -22,7 +22,7 @@ llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0)
 excel_path = None
 agent = create_agent(excel_path, llm)
 
- v
+
 
 @cl.on_chat_start
 async def start():
