@@ -497,7 +497,8 @@ async def handle_call_tool(
         logger.error(f"Error executing {name}: {e}")
         return [TextContent(type="text", text=f"Error: {str(e)}")]
 
-async def run():
+
+async def run_stdio():
     from mcp.server.stdio import stdio_server
     
     async with stdio_server() as (read_stream, write_stream):
@@ -506,3 +507,45 @@ async def run():
             write_stream,
             server.create_initialization_options()
         )
+
+async def run_sse(port: int):
+    from mcp.server.sse import SseServerTransport
+    from starlette.applications import Starlette
+    from starlette.routing import Route
+    import uvicorn
+    
+    sse = SseServerTransport("/messages")
+    
+    async def handle_sse(request):
+        async with sse.connect_sse(
+            request.scope, 
+            request.receive, 
+            request._send
+        ) as streams:
+            await server.run(
+                streams[0], 
+                streams[1], 
+                server.create_initialization_options()
+            )
+            
+    async def handle_messages(request):
+        await sse.handle_post_message(request.scope, request.receive, request._send)
+        
+    app = Starlette(
+        debug=True,
+        routes=[
+            Route("/sse", endpoint=handle_sse),
+            Route("/messages", endpoint=handle_messages, methods=["POST"])
+        ]
+    )
+    
+    config = uvicorn.Config(app, host="0.0.0.0", port=port, log_level="info")
+    server_instance = uvicorn.Server(config)
+    await server_instance.serve()
+
+async def run(port: int | None = None):
+    if port is not None:
+        await run_sse(port)
+    else:
+        await run_stdio()
+
