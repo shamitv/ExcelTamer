@@ -244,36 +244,35 @@ Implement these as early as possible:
 
 ## 8) Repo Layout and Files
 
-Create a new package:
+Integrate into the existing `ExcelTamer` package so no new PyPI package is required.
 
-exceltamer_mcp/
-init.py
-server.py # MCP server app: tool/resource/prompt registration
-config.py # env + config parsing
-safety.py # path sandbox + limits + validators
-sessions.py # session state + workbook handle management
-audit.py # audit logging utilities
-engine/
-init.py
-workbook.py # open/close/save/save_as
-read.py # query_cell, read_range, previews
-write.py # change_cell_value, write_range, batch_update
-search.py # search across sheets
-diff.py # diff + checkpoints
-export.py # csv export
-vision.py # capture image (optional)
-schemas/
-init.py
-models.py # Pydantic request/response models
-prompts/
-safe_edit.md
-financial_metric_extract.md
-tests/
-fixtures/
-sample.xlsx
-test_smoke_tools.py
-test_safety_paths.py
-test_limits_truncation.py
+ExcelTamer/
+  __init__.py           # Expose main classes
+  ExcelAutomation.py    # Existing core
+  mcp/                  # NEW subpackage
+    __init__.py
+    main.py             # Entrypoint (python -m ExcelTamer.mcp.main)
+    server.py           # FastMCP server definition
+    config.py           # env + config parsing
+    safety.py           # path sandbox + limits + validators
+    sessions.py         # session state + workbook handle management
+    audit.py            # audit logging utilities
+    engine/             # Adapters calling ExcelAutomation
+      __init__.py
+      workbook.py       # wrappers for open/close/save
+      read.py           # query_cell, read_range, previews
+      write.py          # change_cell_value, write_range, batch_update
+      search.py         # search
+      diff.py           # diff + checkpoints
+      export.py         # csv export
+      vision.py         # capture image (optional)
+    schemas/
+      __init__.py
+      models.py         # Pydantic request/response models
+    prompts/
+      safe_edit.md
+      financial_metric_extract.md
+  tests/                # (or inside root test/ folder)
 
 
 ---
@@ -305,7 +304,8 @@ test_limits_truncation.py
 **Goal:** MCP server runs; you can open and close a workbook.
 
 Tasks:
-- Create `exceltamer_mcp/` package
+- Create `ExcelTamer/mcp/` subpackage structure
+- Ensure `python -m ExcelTamer.mcp.main` (or similar) is runnable
 - Implement `config.py` (ALLOWED_ROOTS, limits)
 - Implement `safety.py` path checks
 - Implement `engine/workbook.py` open/close/save/save_as
@@ -415,7 +415,7 @@ Acceptance:
 
 ### 11.2 Suggested “Copilot prompts” per phase (copy/paste)
 **Phase 1 prompt:**
-> Create an MCP server package exceltamer_mcp with tools excel.open_workbook, excel.save, excel.save_as, excel.close. Add path sandboxing using ALLOWED_ROOTS env var and reject traversal/symlink escape. Return stable workbook_id and store workbook handles in SessionState.
+> Implement an MCP server subpackage `ExcelTamer.mcp` using FastMCP. Tools: excel.open_workbook, excel.save, excel.save_as, excel.close. use `ExcelAutomation` as the backend. Add path sandboxing using ALLOWED_ROOTS env var and reject traversal/symlink escape. Return stable workbook_id and store workbook handles in SessionState.
 
 **Phase 2 prompt:**
 > Implement read tools for structure, query_cell, read_range with truncation limits. Return values as 2D arrays plus warnings and truncated flag. Add a sheet preview tool.
