@@ -111,7 +111,7 @@ twine upload dist/*
 (Note: Will need PyPI credentials)
 
 ### 3.6. Documentation
-- [ ] Write User Guide (explaining how to use `ExcelTamerTools` and `ExcelAutomation`)
+- [x] Write User Guide (explaining how to use `ExcelTamerTools` and `ExcelAutomation`)
 
 ## 4. Verification Plan
 
