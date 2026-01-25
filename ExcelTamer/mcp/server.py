@@ -18,7 +18,9 @@ from .engine import workbook as workbook_engine
 from .engine import read as read_engine
 from .engine import read as read_engine
 from .engine import write as write_engine
+from .engine import write as write_engine
 from .engine import search as search_engine
+from .engine import diff as diff_engine
 
 # Configure logging (stderr so it doesn't break json-rpc on stdout)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -197,6 +199,42 @@ async def handle_list_tools() -> list[Tool]:
                 },
                 "required": ["workbook_id", "query"]
             }
+        ),
+        Tool(
+            name="excel.checkpoint_create",
+            description="Create a named checkpoint of the current workbook state.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "workbook_id": {"type": "string"},
+                    "name": {"type": "string"}
+                },
+                "required": ["workbook_id", "name"]
+            }
+        ),
+        Tool(
+            name="excel.checkpoint_rollback",
+            description="Rollback workbook to a named checkpoint (reloads file).",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "workbook_id": {"type": "string"},
+                    "name": {"type": "string"}
+                },
+                "required": ["workbook_id", "name"]
+            }
+        ),
+        Tool(
+            name="excel.preview_diff",
+            description="Show recent changes/audit history for this workbook.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "workbook_id": {"type": "string"},
+                    "max_changes": {"type": "integer", "default": 20}
+                },
+                "required": ["workbook_id"]
+            }
         )
     ]
 
@@ -337,6 +375,30 @@ async def handle_call_tool(
                 match_mode=match_mode, 
                 max_hits=max_hits
             )
+            return [TextContent(type="text", text=str(result))]
+
+        elif name == "excel.checkpoint_create":
+            workbook_id = arguments.get("workbook_id")
+            name = arguments.get("name")
+            if not workbook_id or not name:
+                raise ValueError("workbook_id and name required")
+            result = diff_engine.checkpoint_create(workbook_id, name)
+            return [TextContent(type="text", text=str(result))]
+
+        elif name == "excel.checkpoint_rollback":
+            workbook_id = arguments.get("workbook_id")
+            name = arguments.get("name")
+            if not workbook_id or not name:
+                raise ValueError("workbook_id and name required")
+            result = diff_engine.checkpoint_rollback(workbook_id, name)
+            return [TextContent(type="text", text=str(result))]
+
+        elif name == "excel.preview_diff":
+            workbook_id = arguments.get("workbook_id")
+            max_changes = arguments.get("max_changes", 20)
+            if not workbook_id:
+                raise ValueError("workbook_id required")
+            result = diff_engine.preview_diff(workbook_id, max_changes)
             return [TextContent(type="text", text=str(result))]
             
         else:
