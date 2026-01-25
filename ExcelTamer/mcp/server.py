@@ -20,7 +20,11 @@ from .engine import read as read_engine
 from .engine import write as write_engine
 from .engine import write as write_engine
 from .engine import search as search_engine
+from .engine import write as write_engine
+from .engine import search as search_engine
 from .engine import diff as diff_engine
+from .sessions import session 
+from mcp.types import Resource, Prompt, PromptMessage, PromptArgument
 
 # Configure logging (stderr so it doesn't break json-rpc on stdout)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -237,6 +241,91 @@ async def handle_list_tools() -> list[Tool]:
             }
         )
     ]
+
+@server.list_resources()
+async def handle_list_resources() -> list[Resource]:
+    # Resource: List of open workbooks
+    # URI: excel://workbooks
+    wb_list_resource = Resource(
+        uri="excel://workbooks",
+        name="Open Workbooks",
+        description="List of currently open workbook IDs and filenames",
+        mimeType="application/json"
+    )
+    return [wb_list_resource]
+
+@server.read_resource()
+async def handle_read_resource(uri: str) -> str | bytes:
+    if uri == "excel://workbooks":
+        workbooks = []
+        for wb_id, automation in session.open_workbooks.items():
+            workbooks.append({
+                "id": wb_id,
+                "name": automation.wb.name
+            })
+        return str(workbooks)
+    
+    # Pattern: excel://workbooks/{id}/summary
+    # Simple manual parsing since we don't have pattern matching in this basic skeleton
+    import re
+    match = re.match(r"excel://workbooks/([^/]+)/summary", uri)
+    if match:
+        wb_id = match.group(1)
+        automation = session.get_workbook(wb_id)
+        if automation:
+            return str(read_engine.get_structure(wb_id))
+        else:
+            raise ValueError(f"Workbook {wb_id} not found")
+
+    raise ValueError(f"Resource not found: {uri}")
+
+@server.list_prompts()
+async def handle_list_prompts() -> list[Prompt]:
+    return [
+        Prompt(
+            name="safe-edit",
+            description="Workflow for safely editing an Excel file with checkpoints.",
+            arguments=[]
+        ),
+        Prompt(
+            name="financial-extract",
+            description="Workflow for extracting financial metrics.",
+            arguments=[]
+        )
+    ]
+
+@server.get_prompt()
+async def handle_get_prompt(name: str, arguments: dict | None) -> types.GetPromptResult:
+    import os
+    # Load prompt text from files
+    # Assume prompts are in ./prompts/ relative to this file
+    base_dir = os.path.dirname(__file__)
+    
+    if name == "safe-edit":
+        with open(os.path.join(base_dir, "prompts", "safe_edit.md"), "r") as f:
+            content = f.read()
+        return types.GetPromptResult(
+            messages=[
+                PromptMessage(
+                    role="user",
+                    content=TextContent(type="text", text=content)
+                )
+            ]
+        )
+        
+    elif name == "financial-extract":
+        with open(os.path.join(base_dir, "prompts", "financial_metric_extract.md"), "r") as f:
+            content = f.read()
+        return types.GetPromptResult(
+            messages=[
+                PromptMessage(
+                    role="user",
+                    content=TextContent(type="text", text=content)
+                )
+            ]
+        )
+        
+    raise ValueError(f"Prompt not found: {name}")
 
 @server.call_tool()
 async def handle_call_tool(

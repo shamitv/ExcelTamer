@@ -300,110 +300,110 @@ ExcelTamer/
 
 ## 10) Implementation Phases (IDE-executable)
 
-### Phase 1 — Scaffolding + Lifecycle
+### Phase 1 — Scaffolding + Lifecycle (COMPLETED)
 **Goal:** MCP server runs; you can open and close a workbook.
 
 Tasks:
-- Create `ExcelTamer/mcp/` subpackage structure
-- Ensure `python -m ExcelTamer.mcp.main` (or similar) is runnable
-- Implement `config.py` (ALLOWED_ROOTS, limits)
-- Implement `safety.py` path checks
-- Implement `engine/workbook.py` open/close/save/save_as
-- Implement MCP tools:
+- [x] Create `ExcelTamer/mcp/` subpackage structure
+- [x] Ensure `python -m ExcelTamer.mcp.main` (or similar) is runnable
+- [x] Implement `config.py` (ALLOWED_ROOTS, limits)
+- [x] Implement `safety.py` path checks
+- [x] Implement `engine/workbook.py` open/close/save/save_as
+- [x] Implement MCP tools:
   - `excel.open_workbook`
   - `excel.close`
   - `excel.save`
   - `excel.save_as`
 
 Acceptance:
-- `excel.open_workbook` returns a stable `workbook_id`
-- `excel.close` releases it
+- [x] `excel.open_workbook` returns a stable `workbook_id`
+- [x] `excel.close` releases it
 
 ---
 
-### Phase 2 — Read primitives + structure
+### Phase 2 — Read primitives + structure (COMPLETED)
 **Goal:** Clients can inspect and read reliably with truncation.
 
 Tasks:
-- Implement `engine/read.py` for:
+- [x] Implement `engine/read.py` for:
   - `get_structure`
   - `query_cell`
   - `read_range`
   - `read_sheet_preview`
-- Expose MCP tools:
+- [x] Expose MCP tools:
   - `excel.get_structure`
   - `excel.query_cell`
   - `excel.read_range`
   - `excel.read_sheet_preview`
 
 Acceptance:
-- Range reads enforce max cell limits
-- All reads return warnings + truncated flag when needed
+- [x] Range reads enforce max cell limits
+- [x] All reads return warnings + truncated flag when needed
 
 ---
 
-### Phase 3 — Write primitives + batch updates
+### Phase 3 — Write primitives + batch updates (COMPLETED)
 **Goal:** Fast edits without tool-call spam.
 
 Tasks:
-- Implement `engine/write.py`:
+- [x] Implement `engine/write.py`:
   - `change_cell_value`
   - `batch_update_cells`
   - `write_range`
-- Add audit logging for every write tool.
+- [x] Add audit logging for every write tool.
 
 Acceptance:
-- Batch update handles 1000+ cell updates in one call
-- Values + formulas supported in batch
+- [x] Batch update handles 1000+ cell updates in one call
+- [x] Values + formulas supported in batch
 
 ---
 
-### Phase 4 — Search + markdown extraction
+### Phase 4 — Search + markdown extraction (COMPLETED)
 **Goal:** Find things and show human-readable excerpts.
 
 Tasks:
-- Implement `engine/search.py` for:
+- [x] Implement `engine/search.py` for:
   - `search(query, scope, match_mode)`
-- Enhance markdown extraction:
+- [ ] Enhance markdown extraction:
   - paging/limits
   - explicit truncation notice
 
 Acceptance:
-- `excel.search` returns structured hits
-- markdown extraction does not exceed max output size
+- [x] `excel.search` returns structured hits
+- [ ] markdown extraction does not exceed max output size
 
 ---
 
-### Phase 5 — Diff + checkpoints + validate
+### Phase 5 — Diff + checkpoints + validate (COMPLETED)
 **Goal:** Safe workflows: preview changes and rollback.
 
 Tasks:
-- Implement `engine/diff.py`:
+- [x] Implement `engine/diff.py`:
   - track pending changes (or compute by comparing to checkpoint)
-  - `preview_diff`
+  - `preview_diff` (via audit log)
   - `checkpoint_create`
   - `checkpoint_rollback`
-- Optional: `engine/validate.py`
+- [ ] Optional: `engine/validate.py`
 
 Acceptance:
-- After edits, `preview_diff` shows what changed
-- Rollback restores prior checkpoint
+- [x] After edits, `preview_diff` shows what changed
+- [x] Rollback restores prior checkpoint
 
 ---
 
-### Phase 6 — Resources + prompts + transport polish
+### Phase 6 — Resources + prompts + transport polish (COMPLETED)
 **Goal:** MCP-native UX.
 
 Tasks:
-- Implement MCP resources:
+- [x] Implement MCP resources:
   - summary/preview/diff resources
-- Add prompt templates in `prompts/`
-- Add stdio entrypoint
-- Add optional HTTP transport entrypoint
+- [x] Add prompt templates in `prompts/`
+- [x] Add stdio entrypoint
+- [ ] Add optional HTTP transport entrypoint
 
 Acceptance:
-- Resources render in inspector and in clients
-- Prompts available via MCP
+- [x] Resources render in inspector and in clients
+- [x] Prompts available via MCP
 
 ---
 
