@@ -31,12 +31,13 @@ class ExcelAutomation:
         else:
             self.wb.save()
 
-    def close(self) -> None:
+    def close(self, quit_app: bool = True) -> None:
         self.wb.close()
-        self.app.quit()
+        if quit_app:
+            self.app.quit()
 
     def list_sheets(self) -> list[str]:
-        return [sheet.tool_name for sheet in self.wb.sheets]
+        return [sheet.name for sheet in self.wb.sheets]
 
     def add_sheet(self, sheet_name: str) -> None:
         self.wb.sheets.add(sheet_name)
