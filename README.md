@@ -29,4 +29,15 @@ test/invoke_agent.py is a sample script that demonstrates how to use ExcelTamer 
 
 test/ChainlitTest.py is a sample script that demonstrates how to use ExcelTamer as a ChatBot.
 
- 
+
+## MCP Server
+
+ExcelTamer includes a full-featured [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server. This allows you to use ExcelTamer capabilities directly within AI interfaces like **Claude Desktop**, **Cursor**, or any MCP-compliant client.
+
+Features:
+*   Safe file access (sandboxing, read-only modes)
+*   Structured reading and writing (batch updates, range reads)
+*   Search and inspection
+*   Checkpoints and rollback for safe editing
+
+See the [MCP Server Guide](docs/mcp_server.md) for installation and configuration details.

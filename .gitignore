@@ -169,3 +169,6 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# ExcelTamer MCP Audit Logs
+.exceltamer_mcp_logs/
