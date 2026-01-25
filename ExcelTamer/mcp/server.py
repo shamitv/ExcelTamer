@@ -16,7 +16,9 @@ import mcp.types as types
 from .engine import workbook as workbook_engine
 from .engine import workbook as workbook_engine
 from .engine import read as read_engine
+from .engine import read as read_engine
 from .engine import write as write_engine
+from .engine import search as search_engine
 
 # Configure logging (stderr so it doesn't break json-rpc on stdout)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -179,6 +181,22 @@ async def handle_list_tools() -> list[Tool]:
                 },
                 "required": ["workbook_id", "sheet", "start_cell", "values"]
             }
+        ),
+        Tool(
+            name="excel.search",
+            description="Search for a value across a sheet or the entire workbook.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "workbook_id": {"type": "string"},
+                    "query": {"type": "string"},
+                    "sheet": {"type": "string", "description": "Optional. If omitted, searches all sheets."},
+                    "scope": {"type": "string", "enum": ["values", "formulas", "both"], "default": "both"},
+                    "match_mode": {"type": "string", "enum": ["contains", "exact", "regex"], "default": "contains"},
+                    "max_hits": {"type": "integer", "default": 200}
+                },
+                "required": ["workbook_id", "query"]
+            }
         )
     ]
 
@@ -299,6 +317,26 @@ async def handle_call_tool(
                 raise ValueError("workbook_id, sheet, start_cell, and values are required")
                 
             result = write_engine.write_range(workbook_id, sheet, start_cell, values)
+            return [TextContent(type="text", text=str(result))]
+
+        elif name == "excel.search":
+            workbook_id = arguments.get("workbook_id")
+            query = arguments.get("query")
+            sheet = arguments.get("sheet")
+            scope = arguments.get("scope", "both")
+            match_mode = arguments.get("match_mode", "contains")
+            max_hits = arguments.get("max_hits", 200)
+            
+            if not workbook_id or not query:
+                raise ValueError("workbook_id and query are required")
+                
+            result = search_engine.search(
+                workbook_id, query, 
+                sheet=sheet, 
+                scope=scope, 
+                match_mode=match_mode, 
+                max_hits=max_hits
+            )
             return [TextContent(type="text", text=str(result))]
             
         else:
