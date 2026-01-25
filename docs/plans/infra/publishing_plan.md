@@ -30,7 +30,7 @@ We will use modern Python packaging standards with `pyproject.toml` and `setupto
 ## 3. Implementation Steps
 
 ### 3.1. Prepare Source Code
-- [ ] ensure `ExcelTamer/__init__.py` exposes the main classes (`ExcelAutomation`, `ExcelTamer`, etc.) to make imports cleaner for users.
+- [x] ensure `ExcelTamer/__init__.py` exposes the main classes (`ExcelAutomation`, `ExcelTamer`, etc.) to make imports cleaner for users.
   - Current state: Empty.
   - Desired state: 
     - `from .ExcelAutomation import ExcelAutomation`
@@ -57,7 +57,7 @@ authors = [
 license = { file = "LICENSE" }
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     "Operating System :: OS Independent",
 ]
 dependencies = [
