@@ -14,7 +14,9 @@ import mcp.types as types
 
 # Import engine functions
 from .engine import workbook as workbook_engine
+from .engine import workbook as workbook_engine
 from .engine import read as read_engine
+from .engine import write as write_engine
 
 # Configure logging (stderr so it doesn't break json-rpc on stdout)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -123,6 +125,60 @@ async def handle_list_tools() -> list[Tool]:
                 },
                 "required": ["workbook_id", "sheet"]
             }
+        ),
+        Tool(
+            name="excel.change_cell_value",
+            description="Write a value/formula to a single cell.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "workbook_id": {"type": "string"},
+                    "sheet": {"type": "string"},
+                    "cell": {"type": "string"},
+                    "value": {"type": ["string", "number", "boolean", "null"]}
+                },
+                "required": ["workbook_id", "sheet", "cell", "value"]
+            }
+        ),
+        Tool(
+            name="excel.batch_update_cells",
+            description="Write multiple non-contiguous cells in one go.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "workbook_id": {"type": "string"},
+                    "updates": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "sheet": {"type": "string"},
+                                "cell": {"type": "string"},
+                                "value": {"type": ["string", "number", "boolean", "null"]}
+                            },
+                            "required": ["sheet", "cell", "value"]
+                        }
+                    }
+                },
+                "required": ["workbook_id", "updates"]
+            }
+        ),
+        Tool(
+            name="excel.write_range",
+            description="Write a 2D array of values starting at a specific cell.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "workbook_id": {"type": "string"},
+                    "sheet": {"type": "string"},
+                    "start_cell": {"type": "string"},
+                    "values": {
+                        "type": "array", 
+                        "items": {"type": "array", "items": {"type": ["string", "number", "boolean", "null"]}}
+                    }
+                },
+                "required": ["workbook_id", "sheet", "start_cell", "values"]
+            }
         )
     ]
 
@@ -209,6 +265,40 @@ async def handle_call_tool(
                 raise ValueError("workbook_id and sheet are required")
             
             result = read_engine.read_sheet_preview(workbook_id, sheet, rows=rows, cols=cols)
+            return [TextContent(type="text", text=str(result))]
+
+        elif name == "excel.change_cell_value":
+            workbook_id = arguments.get("workbook_id")
+            sheet = arguments.get("sheet")
+            cell = arguments.get("cell")
+            value = arguments.get("value")
+            
+            if not workbook_id or not sheet or not cell:
+                raise ValueError("workbook_id, sheet, and cell are required")
+                
+            result = write_engine.change_cell_value(workbook_id, sheet, cell, value)
+            return [TextContent(type="text", text=str(result))]
+            
+        elif name == "excel.batch_update_cells":
+            workbook_id = arguments.get("workbook_id")
+            updates = arguments.get("updates")
+            
+            if not workbook_id or not updates:
+                raise ValueError("workbook_id and updates are required")
+                
+            result = write_engine.batch_update_cells(workbook_id, updates)
+            return [TextContent(type="text", text=str(result))]
+            
+        elif name == "excel.write_range":
+            workbook_id = arguments.get("workbook_id")
+            sheet = arguments.get("sheet")
+            start_cell = arguments.get("start_cell")
+            values = arguments.get("values")
+            
+            if not workbook_id or not sheet or not start_cell or values is None:
+                raise ValueError("workbook_id, sheet, start_cell, and values are required")
+                
+            result = write_engine.write_range(workbook_id, sheet, start_cell, values)
             return [TextContent(type="text", text=str(result))]
             
         else:
