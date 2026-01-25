@@ -12,6 +12,9 @@ ExcelTamer is an AI Agent designed to work with Excel files. It can automate var
 
 To install ExcelTamer, clone the repo
 
+## Documentation
+For detailed usage instructions, including API examples and available tools, please refer to the [User Guide](docs/USER_GUIDE.md).
+
 ## Usage
 
 test/invoke_agent.py is a sample script that demonstrates how to use ExcelTamer to automate Excel tasks.
