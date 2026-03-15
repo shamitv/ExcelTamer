@@ -8,6 +8,7 @@ Technical documentation for how ExcelTamer interacts with Microsoft Excel.
 
 | Document | Description |
 |---|---|
+| [HOW-TO: Custom Python Integration](HOWTO_custom_python_integration.md) | **Start Here:** Definitive guide for developers integrating Excel automation (`xlwings`) directly into their own asynchronous or multithreaded Python codebases (includes screenshot example). |
 | [Workbook Structure & Lifecycle](workbook_structure.md) | `ExcelAutomation` class, sheet management, workbook inspection, open/save/close lifecycle, MCP Resources/Prompts, session management, path safety, and config |
 | [Reading & Writing](reading_writing.md) | Single-cell queries, DataFrame and Markdown range reads, 2D array reads, cell writes, batch updates, and range writes |
 | [Screenshot & Image Analysis](screenshot_image_analysis.md) | PNG screenshot capture via xlwings and vision-LLM analysis of spreadsheet images |
