@@ -185,7 +185,7 @@ class ExcelAutomation:
         df = self.get_dataframe_with_excel_headers_impl(sheet, search_range)
 
         # Find all cells with the specified value
-        found_cells = df[df.isin([value])].stack().index.tolist()
+        found_cells = df[df.isin([value])].stack().dropna().index.tolist()
 
         # Convert the DataFrame index to Excel row and column indices
         found_cells = [(sheet.name, df.columns.get_loc(col) + 1, int(df.at[row, 'RowNumber'])) for row, col in

@@ -14,7 +14,7 @@ logging.basicConfig(
 load_dotenv()
 
 # --- LangChain imports ---
-from langchain.memory import ConversationBufferWindowMemory
+from langchain_classic.memory import ConversationBufferWindowMemory
 
 # --- Custom imports from your environment ---
 from langchain_openai import ChatOpenAI

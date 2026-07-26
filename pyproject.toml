@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=83.0.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -10,27 +10,32 @@ readme = "README.md"
 authors = [
   { name = "Shamit", email = "your.email@example.com" },
 ]
-license = { file = "LICENSE" }
+license = "GPL-3.0-only"
+license-files = ["LICENSE"]
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "xlwings~=0.33.6",
-    "pandas~=2.2.3",
-    "langchain~=0.3.15",
-    "langchain_community",
-    "langchain_openai",
-    "python-dotenv~=1.0.1",
-    "langchain-core~=0.3.31",
-    "langchain-openai~=0.3.2",
-    "Pillow",
-    "chainlit~=2.0.601",
-    "pydantic~=2.10.6",
-    "tabulate",
+    "xlwings~=0.36.10",
+    "pandas~=3.0.5",
+    "langchain~=1.3.14",
+    "langchain-classic~=1.0.8",
+    "langchain-core~=1.5.1",
+    "langchain-openai~=1.4.1",
+    "python-dotenv~=1.2.2",
+    "Pillow~=12.3.0",
+    "chainlit~=2.11.1",
+    "pydantic~=2.13.4",
+    "tabulate~=0.10.0",
+    "mcp~=1.28.1",
+    "openpyxl~=3.1.5",
+    "openai~=2.48.0",
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.11,<3.14"
 
 [project.urls]
 "Homepage" = "https://github.com/shamitv/ExcelTamer"

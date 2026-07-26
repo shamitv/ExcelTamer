@@ -9,10 +9,10 @@ import tempfile
 
 from ExcelTamer.ExcelAutomation import ExcelManager
 
-from langchain.agents import initialize_agent, AgentType
+from langchain_classic.agents import AgentType, initialize_agent
 from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
-from langchain.schema import HumanMessage
+from langchain_core.messages import HumanMessage
 
 executor = ThreadPoolExecutor()
 

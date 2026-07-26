@@ -1,6 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor
 
-from langchain.agents import create_openai_functions_agent, AgentExecutor
+from langchain_classic.agents import AgentExecutor, create_openai_functions_agent
 from langchain_core.language_models import BaseChatModel
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
