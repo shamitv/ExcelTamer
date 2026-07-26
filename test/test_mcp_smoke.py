@@ -1,36 +1,38 @@
 """MCP-only smoke tests that do not require Microsoft Excel."""
 
 import asyncio
+import json
 import os
 import socket
 import sys
 import unittest
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pandas as pd
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.sse import sse_client
 from mcp.client.stdio import stdio_client
 
-from ExcelTamer.mcp.engine import read, search, write
+from ExcelTamer.mcp.engine import diff, read, search, workbook, write
 from ExcelTamer.mcp.excel import ExcelAutomation
 from ExcelTamer.mcp.server import (
     handle_get_prompt,
     handle_list_prompts,
     handle_list_resources,
     handle_list_tools,
+    handle_read_resource,
 )
 from ExcelTamer.mcp.sessions import session
 
 
 class ProtocolSurfaceTests(unittest.TestCase):
-    def test_protocol_surface_is_unchanged(self):
+    def test_protocol_surface(self):
         tools = asyncio.run(handle_list_tools())
         resources = asyncio.run(handle_list_resources())
         prompts = asyncio.run(handle_list_prompts())
 
-        self.assertEqual(len(tools), 15)
+        self.assertEqual(len(tools), 17)
         self.assertEqual(len(resources), 1)
         self.assertEqual(
             {prompt.name for prompt in prompts},
@@ -167,6 +169,169 @@ class EngineTests(unittest.TestCase):
         self.assertEqual(self.backend.sheet.target.value, [[1, 2], [3, 4]])
 
 
+class AttachmentTests(unittest.TestCase):
+    class Book:
+        def __init__(
+            self,
+            name,
+            path=None,
+            *,
+            saved=True,
+            read_only=False,
+        ):
+            self.name = name
+            self.fullname = path or name
+            directory = path.rsplit("\\", 1)[0] if path else ""
+            self.api = SimpleNamespace(
+                Path=directory,
+                Saved=saved,
+                ReadOnly=read_only,
+            )
+            self.sheets = [SimpleNamespace(name="Sheet1")]
+            self.close = Mock()
+
+    class Books(list):
+        def __init__(self, books, active=None):
+            super().__init__(books)
+            self.active = active
+
+    class App:
+        def __init__(self, pid, books):
+            self.pid = pid
+            self.books = books
+
+    class Apps(list):
+        def __init__(self, apps, active=None):
+            super().__init__(apps)
+            self.active = active
+
+    def setUp(self):
+        session.clear()
+        diff.checkpoints.clear()
+
+    def tearDown(self):
+        session.clear()
+        diff.checkpoints.clear()
+
+    def test_lists_apps_saved_unsaved_and_out_of_root_workbooks(self):
+        saved = self.Book(
+            "Budget.xlsx",
+            r"C:\Users\you\Documents\Excel\Budget.xlsx",
+            read_only=True,
+        )
+        unsaved = self.Book("Book1", saved=False)
+        outside_root = self.Book(
+            "Private.xlsx",
+            r"D:\OutsideAllowedRoots\Private.xlsx",
+        )
+        first_app = self.App(101, self.Books([saved, unsaved], active=saved))
+        second_app = self.App(
+            202,
+            self.Books([outside_root], active=outside_root),
+        )
+
+        class InaccessibleApp:
+            pid = 303
+
+            @property
+            def books(self):
+                raise RuntimeError("Excel instance is inaccessible")
+
+        apps = self.Apps(
+            [first_app, second_app, InaccessibleApp()],
+            active=first_app,
+        )
+        registered_id = session.add_workbook(
+            ExcelAutomation.attach(first_app, saved)
+        )
+
+        with patch.object(workbook.xw, "apps", apps):
+            result = workbook.list_open_workbooks()
+
+        self.assertEqual(result["count"], 3)
+        by_name = {item["name"]: item for item in result["workbooks"]}
+        self.assertEqual(by_name["Budget.xlsx"]["workbook_id"], registered_id)
+        self.assertTrue(by_name["Budget.xlsx"]["active"])
+        self.assertTrue(by_name["Budget.xlsx"]["read_only"])
+        self.assertIsNone(by_name["Book1"]["path"])
+        self.assertTrue(by_name["Book1"]["has_unsaved_changes"])
+        self.assertEqual(
+            by_name["Private.xlsx"]["path"],
+            r"D:\OutsideAllowedRoots\Private.xlsx",
+        )
+        self.assertFalse(by_name["Private.xlsx"]["active"])
+        self.assertEqual(result["warnings"][0]["app_pid"], 303)
+        self.assertIn("inaccessible", result["warnings"][0]["error"])
+
+    def test_attaches_active_workbook_idempotently(self):
+        active_book = self.Book(
+            "Active.xlsx",
+            r"C:\Work\Active.xlsx",
+        )
+        app = self.App(404, self.Books([active_book], active=active_book))
+        apps = self.Apps([app], active=app)
+
+        with patch.object(workbook.xw, "apps", apps):
+            first = workbook.attach_workbook()
+            second = workbook.attach_workbook()
+
+        self.assertEqual(first["workbook_id"], second["workbook_id"])
+        self.assertEqual(first["app_pid"], 404)
+        self.assertEqual(first["sheets"], ["Sheet1"])
+        self.assertTrue(first["attached"])
+        self.assertFalse(first["already_attached"])
+        self.assertTrue(second["already_attached"])
+        self.assertEqual(len(session.open_workbooks), 1)
+
+    def test_attach_reports_no_excel_and_no_active_workbook(self):
+        with patch.object(workbook.xw, "apps", self.Apps([])):
+            with self.assertRaisesRegex(
+                ValueError,
+                "No running Excel application",
+            ):
+                workbook.attach_workbook()
+
+        app = self.App(505, self.Books([]))
+        with patch.object(workbook.xw, "apps", self.Apps([app], active=app)):
+            with self.assertRaisesRegex(ValueError, "no open workbook"):
+                workbook.attach_workbook()
+
+    def test_detaches_without_closing_and_rejects_rollback(self):
+        active_book = self.Book(
+            "Attached.xlsx",
+            r"C:\Work\Attached.xlsx",
+        )
+        app = self.App(606, self.Books([active_book], active=active_book))
+        apps = self.Apps([app], active=app)
+
+        with patch.object(workbook.xw, "apps", apps):
+            attached = workbook.attach_workbook()
+        workbook_id = attached["workbook_id"]
+
+        resource = json.loads(asyncio.run(handle_read_resource(
+            "excel://workbooks"
+        )))
+        self.assertEqual(resource[0]["app_pid"], 606)
+        self.assertEqual(resource[0]["path"], r"C:\Work\Attached.xlsx")
+        self.assertTrue(resource[0]["attached"])
+        self.assertEqual(resource[0]["access_mode"], "rw")
+
+        with patch.object(diff.shutil, "copy2") as copy2:
+            with self.assertRaisesRegex(
+                ValueError,
+                "not supported for attached workbooks",
+            ):
+                diff.checkpoint_rollback(workbook_id, "before")
+            copy2.assert_not_called()
+        active_book.close.assert_not_called()
+        self.assertIsNotNone(session.get_workbook(workbook_id))
+
+        result = workbook.close_workbook(workbook_id)
+        self.assertEqual(result["status"], "detached")
+        active_book.close.assert_not_called()
+        self.assertIsNone(session.get_workbook(workbook_id))
+
+
 class StdioHandshakeTests(unittest.IsolatedAsyncioTestCase):
     async def test_stdio_discovery_and_prompt_retrieval(self):
         env = os.environ.copy()
@@ -187,7 +352,7 @@ class StdioHandshakeTests(unittest.IsolatedAsyncioTestCase):
                 prompts = await session.list_prompts()
                 safe_edit = await session.get_prompt("safe-edit")
 
-                self.assertEqual(len(tools.tools), 15)
+                self.assertEqual(len(tools.tools), 17)
                 self.assertEqual(len(resources.resources), 1)
                 self.assertEqual(len(prompts.prompts), 2)
                 self.assertTrue(safe_edit.messages[0].content.text.strip())
@@ -229,7 +394,7 @@ class SseHandshakeTests(unittest.IsolatedAsyncioTestCase):
                         prompts = await session.list_prompts()
                         safe_edit = await session.get_prompt("safe-edit")
 
-                        self.assertEqual(len(tools.tools), 15)
+                        self.assertEqual(len(tools.tools), 17)
                         self.assertEqual(len(resources.resources), 1)
                         self.assertEqual(len(prompts.prompts), 2)
                         self.assertTrue(safe_edit.messages[0].content.text.strip())
