@@ -1,5 +1,5 @@
 
-from typing import Optional, Any
+from typing import Optional
 import pandas as pd
 from ..sessions import session
 from ..config import MAX_CELLS_READ

@@ -1,7 +1,7 @@
 
 import uuid
 from typing import Dict, Optional
-from ..ExcelAutomation import ExcelAutomation
+from .excel import ExcelAutomation
 
 class SessionState:
     _instance = None

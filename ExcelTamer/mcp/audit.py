@@ -10,7 +10,7 @@ from .config import AUDIT_LOG_DIR
 try:
     Path(AUDIT_LOG_DIR).mkdir(parents=True, exist_ok=True)
 except Exception as e:
-    # Fallback to current dir if permission denied (unlikely in local agent scenario but good practice)
+    # Fall back to the current directory if the configured location is unavailable.
     print(f"Warning: Could not create audit log dir {AUDIT_LOG_DIR}: {e}")
 
 # Configure a specific logger for audit

@@ -1,7 +1,7 @@
 
 import asyncio
 import logging
-from typing import Any, Sequence
+from pathlib import Path
 
 from mcp.server import Server
 from mcp.types import (
@@ -12,18 +12,12 @@ from mcp.types import (
 )
 import mcp.types as types
 
-# Import engine functions
-from .engine import workbook as workbook_engine
 from .engine import workbook as workbook_engine
 from .engine import read as read_engine
-from .engine import read as read_engine
-from .engine import write as write_engine
-from .engine import write as write_engine
-from .engine import search as search_engine
 from .engine import write as write_engine
 from .engine import search as search_engine
 from .engine import diff as diff_engine
-from .sessions import session 
+from .sessions import session
 from mcp.types import Resource, Prompt, PromptMessage, PromptArgument
 
 # Configure logging (stderr so it doesn't break json-rpc on stdout)
@@ -31,6 +25,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 logger = logging.getLogger("ExcelTamerMCP")
 
 server = Server("exceltamer-mcp")
+PROMPT_DIR = Path(__file__).with_name("prompts")
 
 @server.list_tools()
 async def handle_list_tools() -> list[Tool]:
@@ -296,14 +291,8 @@ async def handle_list_prompts() -> list[Prompt]:
 
 @server.get_prompt()
 async def handle_get_prompt(name: str, arguments: dict | None) -> types.GetPromptResult:
-    import os
-    # Load prompt text from files
-    # Assume prompts are in ./prompts/ relative to this file
-    base_dir = os.path.dirname(__file__)
-    
     if name == "safe-edit":
-        with open(os.path.join(base_dir, "prompts", "safe_edit.md"), "r") as f:
-            content = f.read()
+        content = (PROMPT_DIR / "safe_edit.md").read_text(encoding="utf-8")
         return types.GetPromptResult(
             messages=[
                 PromptMessage(
@@ -314,8 +303,9 @@ async def handle_get_prompt(name: str, arguments: dict | None) -> types.GetPromp
         )
         
     elif name == "financial-extract":
-        with open(os.path.join(base_dir, "prompts", "financial_metric_extract.md"), "r") as f:
-            content = f.read()
+        content = (PROMPT_DIR / "financial_metric_extract.md").read_text(
+            encoding="utf-8"
+        )
         return types.GetPromptResult(
             messages=[
                 PromptMessage(
@@ -511,10 +501,11 @@ async def run_stdio():
 async def run_sse(port: int):
     from mcp.server.sse import SseServerTransport
     from starlette.applications import Starlette
-    from starlette.routing import Route
+    from starlette.responses import Response
+    from starlette.routing import Mount, Route
     import uvicorn
     
-    sse = SseServerTransport("/messages")
+    sse = SseServerTransport("/messages/")
     
     async def handle_sse(request):
         async with sse.connect_sse(
@@ -527,15 +518,13 @@ async def run_sse(port: int):
                 streams[1], 
                 server.create_initialization_options()
             )
-            
-    async def handle_messages(request):
-        await sse.handle_post_message(request.scope, request.receive, request._send)
+        return Response()
         
     app = Starlette(
         debug=True,
         routes=[
-            Route("/sse", endpoint=handle_sse),
-            Route("/messages", endpoint=handle_messages, methods=["POST"])
+            Route("/sse", endpoint=handle_sse, methods=["GET"]),
+            Mount("/messages/", app=sse.handle_post_message),
         ]
     )
     

@@ -1,9 +1,8 @@
 
 import re
-from typing import Optional, List, Any
-import pandas as pd
+from typing import Optional
+
 from ..sessions import session
-from ..config import MAX_CELLS_READ
 
 def _match(content: str, query: str, mode: str) -> bool:
     content_str = str(content)
@@ -88,9 +87,8 @@ def search(
                     # We should rely on Excel's Find functionality or accept that 'formula' search is slow/limited.
                     # OR, we only support formula search if explicit or simple.
                     
-                    # For MVP, let's skip formula bulk search OR use `automation.find_all_cells_by_value` logic?
-                    # The existing `find_all_cells_by_value` uses DataFrame `isin`.
-                    # Let's stick to VALUE search primarily unless we implement bulk formula read.
+                    # Value search remains the supported bulk path until formula
+                    # matrices can be read efficiently.
                     # If user really wants formula search, we might iterate only used range.
                     pass
             
