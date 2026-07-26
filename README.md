@@ -9,6 +9,9 @@ client.
 below or read the
 [complete MCP usage guide](https://github.com/shamitv/ExcelTamer/blob/main/docs/mcp_server.md).
 
+**Building or contributing?** Read the
+[developer guide](https://github.com/shamitv/ExcelTamer/blob/main/docs/developer_guide.md).
+
 ## Quick start: use ExcelTamer with an MCP client
 
 ### 1. Install ExcelTamer
