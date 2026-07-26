@@ -501,10 +501,11 @@ async def run_stdio():
 async def run_sse(port: int):
     from mcp.server.sse import SseServerTransport
     from starlette.applications import Starlette
-    from starlette.routing import Route
+    from starlette.responses import Response
+    from starlette.routing import Mount, Route
     import uvicorn
     
-    sse = SseServerTransport("/messages")
+    sse = SseServerTransport("/messages/")
     
     async def handle_sse(request):
         async with sse.connect_sse(
@@ -517,15 +518,13 @@ async def run_sse(port: int):
                 streams[1], 
                 server.create_initialization_options()
             )
-            
-    async def handle_messages(request):
-        await sse.handle_post_message(request.scope, request.receive, request._send)
+        return Response()
         
     app = Starlette(
         debug=True,
         routes=[
-            Route("/sse", endpoint=handle_sse),
-            Route("/messages", endpoint=handle_messages, methods=["POST"])
+            Route("/sse", endpoint=handle_sse, methods=["GET"]),
+            Mount("/messages/", app=sse.handle_post_message),
         ]
     )
     

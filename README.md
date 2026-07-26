@@ -75,7 +75,7 @@ Then configure an SSE-capable MCP client to connect to the stream endpoint:
 
 Client configuration field names can vary; use
 `http://127.0.0.1:8123/sse` as the server URL. ExcelTamer receives client
-messages at `http://127.0.0.1:8123/messages`.
+messages at `http://127.0.0.1:8123/messages/`.
 
 ### 3. Restart the client and ask it to use Excel
 

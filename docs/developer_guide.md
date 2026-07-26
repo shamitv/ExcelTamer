@@ -107,7 +107,7 @@ python test/mcp_client.py --transport sse --port 8123
 ```
 
 The SSE stream is available at `http://127.0.0.1:8123/sse`; client messages are
-posted to `http://127.0.0.1:8123/messages`. See the
+posted to `http://127.0.0.1:8123/messages/`. See the
 [configuration reference](mcp_server.md#configuration) for every environment
 variable that influences the server.
 
@@ -119,10 +119,10 @@ Run the automated suite from the repository root:
 python -m unittest discover -s test -p "test_*.py" -v
 ```
 
-The current suite runs seven tests covering the MCP surface, packaged prompts,
+The current suite runs eight tests covering the MCP surface, packaged prompts,
 range normalization, engine read/search/write behavior, and a real stdio
-handshake. These tests use fakes where workbook behavior is needed and do not
-launch Microsoft Excel.
+and SSE handshake. These tests use fakes where workbook behavior is needed and
+do not launch Microsoft Excel.
 
 For optional live validation, use the included example workbook:
 

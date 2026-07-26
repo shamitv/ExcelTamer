@@ -2,6 +2,7 @@
 
 import asyncio
 import os
+import socket
 import sys
 import unittest
 from types import SimpleNamespace
@@ -9,6 +10,7 @@ from unittest.mock import patch
 
 import pandas as pd
 from mcp import ClientSession, StdioServerParameters
+from mcp.client.sse import sse_client
 from mcp.client.stdio import stdio_client
 
 from ExcelTamer.mcp.engine import read, search, write
@@ -189,6 +191,95 @@ class StdioHandshakeTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(len(resources.resources), 1)
                 self.assertEqual(len(prompts.prompts), 2)
                 self.assertTrue(safe_edit.messages[0].content.text.strip())
+
+
+class SseHandshakeTests(unittest.IsolatedAsyncioTestCase):
+    async def test_sse_discovery_and_prompt_retrieval(self):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as port_socket:
+            port_socket.bind(("127.0.0.1", 0))
+            port = port_socket.getsockname()[1]
+
+        env = os.environ.copy()
+        env["PYTHONPATH"] = os.pathsep.join(
+            path for path in (os.getcwd(), env.get("PYTHONPATH")) if path
+        )
+        process = await asyncio.create_subprocess_exec(
+            sys.executable,
+            "-m",
+            "ExcelTamer.mcp.main",
+            "--port",
+            str(port),
+            env=env,
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stderr_text = ""
+        try:
+            await self._wait_for_listener(process, port)
+            async with asyncio.timeout(10):
+                async with sse_client(
+                    f"http://127.0.0.1:{port}/sse",
+                    timeout=5,
+                    sse_read_timeout=5,
+                ) as streams:
+                    async with ClientSession(*streams) as session:
+                        await session.initialize()
+                        tools = await session.list_tools()
+                        resources = await session.list_resources()
+                        prompts = await session.list_prompts()
+                        safe_edit = await session.get_prompt("safe-edit")
+
+                        self.assertEqual(len(tools.tools), 15)
+                        self.assertEqual(len(resources.resources), 1)
+                        self.assertEqual(len(prompts.prompts), 2)
+                        self.assertTrue(safe_edit.messages[0].content.text.strip())
+
+            # Give the request handler time to finish after the SSE client closes.
+            await asyncio.sleep(0.1)
+        finally:
+            if process.returncode is None:
+                process.terminate()
+                try:
+                    await asyncio.wait_for(process.wait(), timeout=5)
+                except TimeoutError:
+                    process.kill()
+                    await process.wait()
+            if process.stderr is not None:
+                stderr_text = (await process.stderr.read()).decode(
+                    errors="replace"
+                )
+
+        self.assertNotIn("Exception in ASGI application", stderr_text)
+        self.assertNotIn(
+            "TypeError: 'NoneType' object is not callable",
+            stderr_text,
+        )
+
+    async def _wait_for_listener(self, process, port):
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + 10
+        while loop.time() < deadline:
+            if process.returncode is not None:
+                stderr = ""
+                if process.stderr is not None:
+                    stderr = (await process.stderr.read()).decode(
+                        errors="replace"
+                    )
+                self.fail(
+                    f"SSE server exited before accepting connections:\n{stderr}"
+                )
+            try:
+                _reader, writer = await asyncio.open_connection(
+                    "127.0.0.1",
+                    port,
+                )
+            except OSError:
+                await asyncio.sleep(0.05)
+                continue
+            writer.close()
+            await writer.wait_closed()
+            return
+        self.fail(f"SSE server did not listen on port {port} within 10 seconds")
 
 
 if __name__ == "__main__":

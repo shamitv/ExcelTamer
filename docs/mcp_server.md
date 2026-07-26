@@ -42,7 +42,7 @@ Configure an SSE-capable MCP client to connect to the server:
 
 Client configuration field names can vary. The SSE stream endpoint is
 `http://127.0.0.1:8123/sse`, and client messages are posted to
-`http://127.0.0.1:8123/messages`. `python -m ExcelTamer.mcp.main` supports the
+`http://127.0.0.1:8123/messages/`. `python -m ExcelTamer.mcp.main` supports the
 same arguments.
 
 ## Configuration
