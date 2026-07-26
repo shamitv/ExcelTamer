@@ -63,6 +63,18 @@ To use ExcelTamer with Claude Desktop, add the following to your `claude_desktop
 ```
 *Note: If installed via pip, you don't need `PYTHONPATH`.*
 
+## Running in HTTP Mode (SSE)
+
+The server can also run in HTTP mode using Server-Sent Events (SSE), which is useful for remote access or clients that prefer HTTP over Stdio.
+
+```bash
+python -m ExcelTamer.mcp.main --port 8080
+```
+
+This will run the server on `http://0.0.0.0:8080`.
+- SSE Endpoint: `/sse`
+- POST Messages Endpoint: `/messages`
+
 ## Tools Reference
 
 ### Lifecycle

@@ -32,7 +32,7 @@ test/ChainlitTest.py is a sample script that demonstrates how to use ExcelTamer 
 
 ## MCP Server
 
-ExcelTamer includes a full-featured [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server. This allows you to use ExcelTamer capabilities directly within AI interfaces like **Claude Desktop**, **Cursor**, or any MCP-compliant client.
+ExcelTamer includes a full-featured [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server. This allows you to use ExcelTamer capabilities directly within AI interfaces like **Claude Desktop**, **Cursor**, or any MCP-compliant client. It supports both **Stdio** and **HTTP SSE** transports.
 
 Features:
 *   Safe file access (sandboxing, read-only modes)

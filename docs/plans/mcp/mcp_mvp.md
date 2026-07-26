@@ -399,7 +399,7 @@ Tasks:
   - summary/preview/diff resources
 - [x] Add prompt templates in `prompts/`
 - [x] Add stdio entrypoint
-- [ ] Add optional HTTP transport entrypoint
+- [x] Add optional HTTP transport entrypoint
 
 Acceptance:
 - [x] Resources render in inspector and in clients
