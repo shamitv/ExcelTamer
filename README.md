@@ -1,43 +1,86 @@
 # ExcelTamer
 
-ExcelTamer is an AI Agent designed to work with Excel files. It can automate various tasks, making it easier to manage and manipulate Excel data programmatically.
+ExcelTamer is a Model Context Protocol (MCP) server for safe, structured
+automation of Microsoft Excel. It exposes workbook lifecycle, reading, writing,
+search, checkpoint, resource, and prompt capabilities to any MCP-compatible
+client.
 
-## Features
+## Requirements
 
-- Automate Excel tasks
-- Read and write Excel files
-- Perform data analysis and manipulation
+- Windows with Microsoft Excel installed
+- Python 3.11 or newer
 
 ## Installation
 
-To install ExcelTamer, clone the repo
+```powershell
+pip install .
+```
 
-## Documentation
-For detailed usage instructions, including API examples and available tools, please refer to the [User Guide](docs/USER_GUIDE.md).
+## Run the server
 
-## Usage
+Start the default stdio transport:
 
-test/invoke_agent.py is a sample script that demonstrates how to use ExcelTamer to automate Excel tasks.
+```powershell
+exceltamer-mcp
+```
 
-1. Create an LLM 
-2. Provide path to Excel File
-3. Create an instance of Agent
-4. Provide the task you want to perform
-5. Run the agent
+The module form remains available:
 
-## ChatBot
+```powershell
+python -m ExcelTamer.mcp.main
+```
 
-test/ChainlitTest.py is a sample script that demonstrates how to use ExcelTamer as a ChatBot.
+For SSE transport:
 
+```powershell
+exceltamer-mcp --port 8123
+```
 
-## MCP Server
+## MCP client configuration
 
-ExcelTamer includes a full-featured [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server. This allows you to use ExcelTamer capabilities directly within AI interfaces like **Claude Desktop**, **Cursor**, or any MCP-compliant client. It supports both **Stdio** and **HTTP SSE** transports.
+```json
+{
+  "mcpServers": {
+    "exceltamer": {
+      "command": "exceltamer-mcp",
+      "env": {
+        "EXCELTAMER_MCP_ALLOWED_ROOTS": "C:\\Users\\you\\Documents\\Excel"
+      }
+    }
+  }
+}
+```
 
-Features:
-*   Safe file access (sandboxing, read-only modes)
-*   Structured reading and writing (batch updates, range reads)
-*   Search and inspection
-*   Checkpoints and rollback for safe editing
+`EXCELTAMER_MCP_ALLOWED_ROOTS` limits which workbook paths the server may
+access. The server defaults to read-only workbook mode and records write
+operations in an audit log.
 
-See the [MCP Server Guide](docs/mcp_server.md) for installation and configuration details.
+## Capabilities
+
+- Open, inspect, save, save-as, and close workbooks
+- Read cells, ranges, sheet previews, and workbook structure
+- Write cells, batches, and rectangular ranges
+- Search workbook values with exact, contains, or regex matching
+- Create and roll back checkpoints
+- Inspect recent write history
+- Discover workbook resources and MCP-native workflow prompts
+
+See the [MCP server guide](docs/mcp_server.md) for configuration, transports,
+and the complete protocol reference.
+
+## Validation
+
+Run the automated MCP smoke tests:
+
+```powershell
+python -m unittest discover -s test -p "test_*.py" -v
+```
+
+Run the standalone protocol client:
+
+```powershell
+python test/mcp_client.py
+```
+
+Pass `--file path\to\workbook.xlsx` to additionally validate opening,
+inspecting, and closing a real workbook.

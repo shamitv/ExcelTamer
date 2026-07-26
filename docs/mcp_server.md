@@ -1,129 +1,133 @@
 # ExcelTamer MCP Server Guide
 
-This guide details the Model Context Protocol (MCP) server integration for ExcelTamer. This server exposes Excel automation capabilities to AI agents (like Claude Desktop, Cursor, or custom MCP clients) in a safe, structured way.
-
-## Overview
-
-The ExcelTamer MCP server provides a standardized interface to interact with local Excel workbooks. It supports:
-*   **Lifecycle Management**: Open, close, save, and save-as operations.
-*   **Reading**: Structure inspection, cell querying, and range reading (with limit enforcement).
-*   **Writing**: Single cell updates, batch updates, and 2D range writes.
-*   **Search**: Finding values or patterns across sheets.
-*   **Safety**: Path sandboxing, checkpoints (undo/rollback), and audit logging.
-*   **Resources**: Direct access to workbook metadata.
-*   **Prompts**: Pre-packaged workflows for common tasks.
+ExcelTamer exposes Microsoft Excel automation through Model Context Protocol
+tools, resources, and prompts. It does not embed or call a model provider.
 
 ## Installation
 
-The MCP server is part of the `ExcelTamer` package.
+ExcelTamer requires Windows, Microsoft Excel, and Python 3.11 or newer.
 
-1.  **Install dependencies**:
-    ```bash
-    pip install -r requirements.txt
-    ```
-    Ensure `mcp` and `openpyxl` are installed.
+```powershell
+pip install .
+```
 
-2.  **Verify installation**:
-    ```bash
-    python -m ExcelTamer.mcp.main
-    ```
-    This should start the server in STDIO mode (you won't see output because it waits for JSON-RPC input).
+The installed package provides the `exceltamer-mcp` command.
+
+## Transports
+
+Stdio is the default and is recommended for local MCP clients:
+
+```powershell
+exceltamer-mcp
+```
+
+SSE can be enabled by supplying a port:
+
+```powershell
+exceltamer-mcp --port 8123
+```
+
+The SSE endpoint is `/sse` and client messages are posted to `/messages`.
+`python -m ExcelTamer.mcp.main` supports the same arguments.
 
 ## Configuration
 
-The server is configured via environment variables.
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `EXCELTAMER_MCP_ALLOWED_ROOTS` | Current directory | Comma-separated filesystem roots the server may access |
+| `EXCELTAMER_MCP_DEFAULT_MODE` | `ro` | Default workbook mode: `ro` or `rw` |
+| `EXCELTAMER_MCP_MAX_CELLS_READ` | `20000` | Maximum cells considered by one read |
+| `EXCELTAMER_MCP_MAX_CELLS_WRITE` | `5000` | Maximum cells accepted by one write |
+| `EXCELTAMER_MCP_AUDIT_LOG_DIR` | `./.exceltamer_mcp_logs` | Directory containing `audit.jsonl` |
 
-| Variable | Description | Default |
-| :--- | :--- | :--- |
-| `EXCELTAMER_MCP_ALLOWED_ROOTS` | Comma-separated list of allowed directory paths. Access outside these roots is blocked. | Current Working Directory |
-| `EXCELTAMER_MCP_MAX_CELLS_READ` | Global limit for cell reads per request. | `20000` |
-| `EXCELTAMER_MCP_MAX_CELLS_WRITE` | Global limit for cell writes per request. | `5000` |
-| `EXCELTAMER_MCP_AUDIT_LOG_DIR` | Directory to store audit logs (`audit.jsonl`). | `./.exceltamer_mcp_logs` |
-
-## Running with Claude Desktop
-
-To use ExcelTamer with Claude Desktop, add the following to your `claude_desktop_config.json`:
+Example client configuration:
 
 ```json
 {
   "mcpServers": {
     "exceltamer": {
-      "command": "python",
-      "args": [
-        "-m",
-        "ExcelTamer.mcp.main"
-      ],
+      "command": "exceltamer-mcp",
       "env": {
-        "EXCELTAMER_MCP_ALLOWED_ROOTS": "C:\\Users\\YourName\\Documents\\ExcelFiles",
-        "PYTHONPATH": "path/to/ExcelTamer/repo" 
+        "EXCELTAMER_MCP_ALLOWED_ROOTS": "C:\\Users\\you\\Documents\\Excel",
+        "EXCELTAMER_MCP_DEFAULT_MODE": "ro"
       }
     }
   }
 }
 ```
-*Note: If installed via pip, you don't need `PYTHONPATH`.*
 
-## Running in HTTP Mode (SSE)
+## Tools
 
-The server can also run in HTTP mode using Server-Sent Events (SSE), which is useful for remote access or clients that prefer HTTP over Stdio.
+### Workbook lifecycle
 
-```bash
-python -m ExcelTamer.mcp.main --port 8080
+| Tool | Purpose |
+| --- | --- |
+| `excel.open_workbook` | Open a validated workbook path and return a `workbook_id` |
+| `excel.close` | Close a session workbook |
+| `excel.save` | Save the current workbook |
+| `excel.save_as` | Save to another validated path |
+
+### Inspection and reading
+
+| Tool | Purpose |
+| --- | --- |
+| `excel.get_structure` | Return sheets, dimensions, used ranges, and named ranges |
+| `excel.query_cell` | Return a cell's value, formula, and rendered text |
+| `excel.read_range` | Return a bounded rectangular value matrix |
+| `excel.read_sheet_preview` | Return a bounded top-left sheet preview |
+
+### Writing and search
+
+| Tool | Purpose |
+| --- | --- |
+| `excel.change_cell_value` | Write one value or formula |
+| `excel.batch_update_cells` | Write non-contiguous cells in one call |
+| `excel.write_range` | Write a two-dimensional matrix |
+| `excel.search` | Search values using contains, exact, or regex matching |
+
+### Checkpoints and history
+
+| Tool | Purpose |
+| --- | --- |
+| `excel.checkpoint_create` | Save a temporary checkpoint copy |
+| `excel.checkpoint_rollback` | Restore a named checkpoint |
+| `excel.preview_diff` | Return recent audited write actions |
+
+All tools after `excel.open_workbook` require its returned `workbook_id`.
+
+## Resources and prompts
+
+`excel://workbooks` returns the workbooks currently held by the server session.
+`excel://workbooks/{id}/summary` returns structure for a specific workbook.
+
+The server exposes two MCP-native prompts:
+
+- `safe-edit`: inspect, checkpoint, edit, and verify a workbook safely.
+- `financial-extract`: inspect labels and extract time-series metrics reliably.
+
+## Validation
+
+Protocol-only validation does not require a workbook:
+
+```powershell
+python test/mcp_client.py
+python -m unittest discover -s test -p "test_*.py" -v
 ```
 
-This will run the server on `http://0.0.0.0:8080`.
-- SSE Endpoint: `/sse`
-- POST Messages Endpoint: `/messages`
+To validate actual Excel automation:
 
-## Tools Reference
-
-### Lifecycle
-*   **`excel.open_workbook(path)`**: Opens a workbook and returns a `workbook_id`. All other tools require this ID.
-*   **`excel.close(workbook_id)`**: Closes the workbook release resources.
-*   **`excel.save(workbook_id)`**: Saves changes to the current file.
-*   **`excel.save_as(workbook_id, output_path)`**: Saves to a new file.
-
-### Reading
-*   **`excel.get_structure(workbook_id)`**: Returns sheets, dimensions, and named ranges.
-*   **`excel.query_cell(workbook_id, sheet, cell)`**: Returns value, formula, and visible text.
-*   **`excel.read_range(workbook_id, sheet, range_a1, max_rows, max_cols)`**: Returns a 2D array of values.
-*   **`excel.read_sheet_preview(workbook_id, sheet)`**: Quick look at the top-left of a sheet.
-
-### Writing
-*   **`excel.change_cell_value(workbook_id, sheet, cell, value)`**: Update a single cell.
-*   **`excel.batch_update_cells(workbook_id, updates)`**: Efficiently update multiple non-contiguous cells. `updates` is a list of `{sheet, cell, value}`.
-*   **`excel.write_range(workbook_id, sheet, start_cell, values)`**: Write a 2D matrix starting at a cell.
-
-### Search
-*   **`excel.search(workbook_id, query, sheet, scope, match_mode)`**: Search for values.
-    *   `choice`: "values", "formulas", "both"
-    *   `match_mode`: "contains", "exact", "regex"
-
-### Safety & History
-*   **`excel.checkpoint_create(workbook_id, name)`**: Save a snapshot of the current state.
-*   **`excel.checkpoint_rollback(workbook_id, name)`**: Revert the workbook to a saved snapshot.
-*   **`excel.preview_diff(workbook_id)`**: Show a summary of recent actions (audit log) for the session.
-
-## Resources
-
-*   **`excel://workbooks`**: JSON list of currently open workbook IDs and filenames.
-*   **`excel://workbooks/{id}/summary`**: Returns the structure of a specific workbook.
-
-## Prompts
-
-*   **`safe-edit`**: A guided workflow for safely editing files (Inspection -> Checkpoint -> Edit -> Verify).
-*   **`financial-extract`**: A guide for extracting time-series financial metrics.
-
-## Development
-
-The MCP server code is located in `ExcelTamer/mcp/`.
-
-*   `server.py`: Main MCP server definition and tool registration.
-*   `engine/`: Core logic implementation.
-*   `safety.py`: Path validation logic.
-*   `audit.py`: Logging implementation.
-
-To run tests:
-```bash
-python test/test_mcp_smoke.py
+```powershell
+python test/mcp_client.py --file test/fixtures/simple.xlsx
 ```
+
+Use `--transport sse --port 8123` when validating a separately running SSE
+server.
+
+## Architecture
+
+- `ExcelTamer/mcp/server.py` defines the MCP protocol surface.
+- `ExcelTamer/mcp/engine/` implements lifecycle, read, write, search, and
+  checkpoint operations.
+- `ExcelTamer/mcp/excel.py` is the internal xlwings backend.
+- `sessions.py`, `safety.py`, and `audit.py` manage workbook handles, path
+  controls, and write history.

@@ -6,7 +6,7 @@ ExcelTamer provides data-safety mechanisms through named checkpoints (snapshot/r
 
 ## Checkpoints
 
-**Engine file:** [`diff.py`](file:///d:/work/ExcelTamer/ExcelTamer/mcp/engine/diff.py)
+**Engine file:** `ExcelTamer/mcp/engine/diff.py`
 
 Checkpoints allow you to snapshot the current state of a workbook and restore it later if something goes wrong.
 
@@ -89,7 +89,7 @@ Shows the recent write operations performed on a workbook by reading from the au
 
 ## Audit Log
 
-**File:** [`audit.py`](file:///d:/work/ExcelTamer/ExcelTamer/mcp/audit.py)
+**File:** `ExcelTamer/mcp/audit.py`
 
 All write operations are logged to an append-only JSONL file.
 
@@ -134,7 +134,9 @@ Each line is a JSON object:
 
 ## Safe Edit Workflow
 
-ExcelTamer ships a **prompt template** ([`safe_edit.md`](file:///d:/work/ExcelTamer/ExcelTamer/mcp/prompts/safe_edit.md)) that guides LLMs through a safe editing workflow:
+ExcelTamer ships the MCP-native `safe-edit` prompt, backed by
+`ExcelTamer/mcp/prompts/safe_edit.md`, to guide clients through a safe editing
+workflow:
 
 1. **Open & Inspect** — open workbook, read structure, preview sheets
 2. **Plan** — identify cells to modify, use search if needed
