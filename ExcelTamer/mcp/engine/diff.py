@@ -1,11 +1,11 @@
 
-import os
 import shutil
 import uuid
 from pathlib import Path
 from tempfile import gettempdir
-from typing import Dict, List, Optional
-from ..sessions import session, ExcelAutomation
+from typing import Dict
+from ..excel import ExcelAutomation
+from ..sessions import session
 
 # We'll store checkpoint paths in session memory
 # workbook_id -> {checkpoint_name -> file_path}

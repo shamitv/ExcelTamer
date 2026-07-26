@@ -1,7 +1,8 @@
 
 from ..config import DEFAULT_MODE
+from ..excel import ExcelAutomation
 from ..safety import validate_path
-from ..sessions import session, ExcelAutomation
+from ..sessions import session
 
 def open_workbook(path: str, mode: str = DEFAULT_MODE) -> dict:
     """

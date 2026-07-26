@@ -1,5 +1,5 @@
 
-from typing import Optional, Any, List
+from typing import Any, List
 from ..sessions import session
 from ..config import MAX_CELLS_WRITE
 from ..audit import log_write
