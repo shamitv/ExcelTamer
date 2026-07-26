@@ -57,6 +57,12 @@ def checkpoint_rollback(workbook_id: str, name: str) -> dict:
     automation = session.get_workbook(workbook_id)
     if not automation:
         raise ValueError(f"Workbook {workbook_id} not found")
+
+    if getattr(automation, "attached", False):
+        raise ValueError(
+            "Checkpoint rollback is not supported for attached workbooks "
+            "because rollback must close and reopen the workbook"
+        )
         
     if workbook_id not in checkpoints or name not in checkpoints[workbook_id]:
         raise ValueError(f"Checkpoint '{name}' not found for this workbook")

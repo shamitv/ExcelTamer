@@ -1,5 +1,6 @@
 
 import asyncio
+import json
 import logging
 from pathlib import Path
 
@@ -43,8 +44,33 @@ async def handle_list_tools() -> list[Tool]:
             }
         ),
         Tool(
+            name="excel.list_open_workbooks",
+            description=(
+                "List all Excel workbooks already open in the current Windows "
+                "desktop session. This deliberately bypasses allowed-root filtering."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {}
+            }
+        ),
+        Tool(
+            name="excel.attach_workbook",
+            description=(
+                "Attach the active Excel workbook without reopening or taking "
+                "ownership of it."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {}
+            }
+        ),
+        Tool(
             name="excel.close",
-            description="Close an open workbook by ID.",
+            description=(
+                "Close an MCP-opened workbook, or detach a workbook that was "
+                "already open in Excel."
+            ),
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -213,7 +239,10 @@ async def handle_list_tools() -> list[Tool]:
         ),
         Tool(
             name="excel.checkpoint_rollback",
-            description="Rollback workbook to a named checkpoint (reloads file).",
+            description=(
+                "Restore a named checkpoint for an MCP-opened workbook. "
+                "Rollback is not available for attached workbooks."
+            ),
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -244,7 +273,7 @@ async def handle_list_resources() -> list[Resource]:
     wb_list_resource = Resource(
         uri="excel://workbooks",
         name="Open Workbooks",
-        description="List of currently open workbook IDs and filenames",
+        description="Metadata for workbooks registered in the MCP session",
         mimeType="application/json"
     )
     return [wb_list_resource]
@@ -254,11 +283,14 @@ async def handle_read_resource(uri: str) -> str | bytes:
     if uri == "excel://workbooks":
         workbooks = []
         for wb_id, automation in session.open_workbooks.items():
-            workbooks.append({
-                "id": wb_id,
-                "name": automation.wb.name
-            })
-        return str(workbooks)
+            workbooks.append(
+                {
+                    "id": wb_id,
+                    "workbook_id": wb_id,
+                    **workbook_engine.workbook_metadata(automation),
+                }
+            )
+        return json.dumps(workbooks)
     
     # Pattern: excel://workbooks/{id}/summary
     # Simple manual parsing since we don't have pattern matching in this basic skeleton
@@ -331,6 +363,14 @@ async def handle_call_tool(
             if not path:
                 raise ValueError("path is required")
             result = workbook_engine.open_workbook(path, mode)
+            return [TextContent(type="text", text=str(result))]
+
+        elif name == "excel.list_open_workbooks":
+            result = workbook_engine.list_open_workbooks()
+            return [TextContent(type="text", text=str(result))]
+
+        elif name == "excel.attach_workbook":
+            result = workbook_engine.attach_workbook()
             return [TextContent(type="text", text=str(result))]
             
         elif name == "excel.close":

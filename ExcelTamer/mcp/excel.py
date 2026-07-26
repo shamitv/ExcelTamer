@@ -10,14 +10,40 @@ logger = logging.getLogger(__name__)
 
 
 class ExcelAutomation:
-    """Own an Excel application/workbook pair for one MCP session entry."""
+    """Manage an Excel application/workbook pair for one MCP session entry."""
 
-    def __init__(self, file_path: str | None = None):
-        self.app = xw.apps.active if xw.apps else xw.App(visible=True)
-        self.wb = (
-            self.app.books.open(file_path)
-            if file_path
-            else self.app.books.active if self.app.books else self.app.books.add()
+    def __init__(
+        self,
+        file_path: str | None = None,
+        *,
+        app: Any | None = None,
+        workbook: Any | None = None,
+        attached: bool = False,
+        access_mode: str = "rw",
+    ):
+        if workbook is not None:
+            self.app = app if app is not None else workbook.app
+            self.wb = workbook
+        else:
+            self.app = xw.apps.active if xw.apps else xw.App(visible=True)
+            self.wb = (
+                self.app.books.open(file_path)
+                if file_path
+                else self.app.books.active
+                if self.app.books
+                else self.app.books.add()
+            )
+        self.attached = attached
+        self.access_mode = access_mode
+
+    @classmethod
+    def attach(cls, app: Any, workbook: Any) -> "ExcelAutomation":
+        """Create a non-owning handle for a workbook already open in Excel."""
+        return cls(
+            app=app,
+            workbook=workbook,
+            attached=True,
+            access_mode="rw",
         )
 
     def save(self, file_path: str | None = None) -> None:
