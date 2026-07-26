@@ -17,13 +17,19 @@ ExcelTamer requires Windows with Microsoft Excel installed and Python 3.11 or
 newer.
 
 ```powershell
-pip install .
+pip install ExcelTamer
 ```
 
 ### 2. Add ExcelTamer to your MCP client
 
-Add this client-neutral server definition to your MCP client's configuration,
-replacing the allowed root with the directory containing your workbooks:
+Choose either stdio or SSE, depending on the transports supported by your MCP
+client.
+
+#### Stdio
+
+For the default stdio transport, add this server definition to your MCP
+client's configuration, replacing the allowed root with the directory
+containing your workbooks:
 
 ```json
 {
@@ -41,6 +47,32 @@ replacing the allowed root with the directory containing your workbooks:
 `EXCELTAMER_MCP_ALLOWED_ROOTS` limits which workbook paths the server may
 access. The server defaults to read-only workbook mode and records write
 operations in an audit log.
+
+#### SSE
+
+To use SSE, start ExcelTamer separately in PowerShell. Set server environment
+variables in the same shell:
+
+```powershell
+$env:EXCELTAMER_MCP_ALLOWED_ROOTS = "C:\Users\you\Documents\Excel"
+exceltamer-mcp --port 8123
+```
+
+Then configure an SSE-capable MCP client to connect to the stream endpoint:
+
+```json
+{
+  "mcpServers": {
+    "exceltamer": {
+      "url": "http://127.0.0.1:8123/sse"
+    }
+  }
+}
+```
+
+Client configuration field names can vary; use
+`http://127.0.0.1:8123/sse` as the server URL. ExcelTamer receives client
+messages at `http://127.0.0.1:8123/messages`.
 
 ### 3. Restart the client and ask it to use Excel
 

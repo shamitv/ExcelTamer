@@ -8,7 +8,7 @@ tools, resources, and prompts. It does not embed or call a model provider.
 ExcelTamer requires Windows, Microsoft Excel, and Python 3.11 or newer.
 
 ```powershell
-pip install .
+pip install ExcelTamer
 ```
 
 The installed package provides the `exceltamer-mcp` command.
@@ -24,11 +24,26 @@ exceltamer-mcp
 SSE can be enabled by supplying a port:
 
 ```powershell
+$env:EXCELTAMER_MCP_ALLOWED_ROOTS = "C:\Users\you\Documents\Excel"
 exceltamer-mcp --port 8123
 ```
 
-The SSE endpoint is `/sse` and client messages are posted to `/messages`.
-`python -m ExcelTamer.mcp.main` supports the same arguments.
+Configure an SSE-capable MCP client to connect to the server:
+
+```json
+{
+  "mcpServers": {
+    "exceltamer": {
+      "url": "http://127.0.0.1:8123/sse"
+    }
+  }
+}
+```
+
+Client configuration field names can vary. The SSE stream endpoint is
+`http://127.0.0.1:8123/sse`, and client messages are posted to
+`http://127.0.0.1:8123/messages`. `python -m ExcelTamer.mcp.main` supports the
+same arguments.
 
 ## Configuration
 
