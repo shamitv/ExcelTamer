@@ -58,6 +58,9 @@ Checkpoint file ──overwrite──▶ Original file path
 - Checkpoints are stored in the **temp directory** and will be cleaned up on system restart.
 - Checkpoint metadata is held **in memory** only — if the MCP server restarts, checkpoint references are lost (the files may still exist in temp).
 - Creating a checkpoint triggers a save, which may have side effects if the workbook contains volatile formulas (e.g., `NOW()`).
+- Attached workbooks can create checkpoints, but cannot roll back to them.
+  Rollback is rejected because it would close and reopen a workbook owned by
+  the user.
 
 ---
 

@@ -12,6 +12,7 @@ pip install ExcelTamer
 ```
 
 The installed package provides the `exceltamer-mcp` command.
+ExcelTamer 0.3.0 exposes 17 MCP tools, one resource, and two prompts.
 
 ## Transports
 
@@ -98,6 +99,46 @@ The expected tool sequence is:
 requires that identifier, so the MCP client must reuse it until the workbook is
 closed.
 
+### Attach a workbook that is already open
+
+Focus the intended workbook in Excel, then ask the client:
+
+```text
+List the workbooks currently open in Excel, attach the active workbook,
+describe its worksheets and used ranges, and then detach from it without
+closing the workbook or Excel.
+```
+
+The expected tool sequence is:
+
+1. `excel.list_open_workbooks`
+2. `excel.attach_workbook`
+3. Inspection, read, write, checkpoint, or save tools as needed
+4. `excel.close` to detach the MCP handle
+
+`excel.attach_workbook` takes no parameters. The workbook active in the active
+Excel application at call time is authoritative. It returns a `workbook_id`
+without reopening the file. Repeated attachment of the same live workbook
+returns the existing identifier with `already_attached: true`.
+
+Each `excel.list_open_workbooks` item contains `app_pid`, `name`, saved `path`
+or `null`, `active`, `read_only`, `has_unsaved_changes`, and an existing
+`workbook_id` when the workbook is already registered. Inaccessible Excel
+instances are skipped and reported individually in the response's `warnings`
+array.
+
+Attached workbooks remain owned by the user. Calling `excel.close` removes the
+MCP session entry and returns `status: "detached"`; it does not close the
+workbook or Excel. Explicit writes, saves, Save As, and checkpoint creation
+remain available. `excel.checkpoint_rollback` is rejected for an attachment
+because rollback requires closing and reopening the workbook.
+
+> **Security warning:** `excel.list_open_workbooks` and
+> `excel.attach_workbook` deliberately bypass
+> `EXCELTAMER_MCP_ALLOWED_ROOTS`. They can expose every workbook open in the
+> same Windows user session, including unsaved workbooks and files outside the
+> configured roots. Use attachment only with a trusted local MCP client.
+
 ### Edit a workbook safely
 
 Ask the client:
@@ -128,7 +169,9 @@ rejected before Excel is started.
 | Tool | Purpose |
 | --- | --- |
 | `excel.open_workbook` | Open a validated workbook path and return a `workbook_id` |
-| `excel.close` | Close a session workbook |
+| `excel.list_open_workbooks` | Discover all xlwings-visible open workbooks, including unsaved and out-of-root workbooks |
+| `excel.attach_workbook` | Attach the active workbook without reopening or taking ownership of it |
+| `excel.close` | Close an MCP-opened workbook or detach a user-owned attachment |
 | `excel.save` | Save the current workbook |
 | `excel.save_as` | Save to another validated path |
 
@@ -158,11 +201,14 @@ rejected before Excel is started.
 | `excel.checkpoint_rollback` | Restore a named checkpoint |
 | `excel.preview_diff` | Return recent audited write actions |
 
-All tools after `excel.open_workbook` require its returned `workbook_id`.
+Workbook operations after `excel.open_workbook` or `excel.attach_workbook`
+require the returned `workbook_id`.
 
 ## Resources and prompts
 
-`excel://workbooks` returns the workbooks currently held by the server session.
+`excel://workbooks` returns each workbook currently held by the server session,
+including its ID, name, saved path, Excel application PID, attachment status,
+access mode, physical read-only state, and unsaved-change state.
 `excel://workbooks/{id}/summary` returns structure for a specific workbook.
 
 The server exposes two MCP-native prompts:

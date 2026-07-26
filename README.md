@@ -99,6 +99,32 @@ the checkpoint.
 Your MCP client handles the `excel.*` tool calls and carries the returned
 `workbook_id` through the workflow.
 
+If the workbook is already open in Excel, focus its Excel window and try:
+
+```text
+List the workbooks currently open in Excel, attach the active workbook,
+describe its worksheets and used ranges, and then detach from it without
+closing the workbook or Excel.
+```
+
+That follows the `list → attach → operate → detach` workflow:
+
+1. `excel.list_open_workbooks` discovers workbooks in all visible Excel
+   applications.
+2. `excel.attach_workbook` registers the active workbook and returns its
+   `workbook_id`.
+3. Read, write, checkpoint, and save tools operate on that identifier.
+4. `excel.close` removes an attached workbook from the MCP session but leaves
+   both the workbook and Excel open.
+
+> **Security warning:** Discovery and attachment deliberately bypass
+> `EXCELTAMER_MCP_ALLOWED_ROOTS`. They can expose every workbook open in the
+> same Windows user session, including unsaved workbooks and files outside the
+> configured roots. Use these tools only with a trusted local MCP client.
+> Checkpoint creation is supported for attached workbooks, but checkpoint
+> rollback is rejected because rollback would have to close and reopen the
+> user's workbook.
+
 ## Run the server manually
 
 Start the default stdio transport:
@@ -155,13 +181,17 @@ the quick start, or in the shell before starting `exceltamer-mcp`.
 
 ## Capabilities
 
-- Open, inspect, save, save-as, and close workbooks
+- Discover all open Excel workbooks and attach the active one without
+  reopening or taking ownership of it
+- Open, inspect, save, save-as, close, and detach workbooks
 - Read cells, ranges, sheet previews, and workbook structure
 - Write cells, batches, and rectangular ranges
 - Search workbook values with exact, contains, or regex matching
 - Create and roll back checkpoints
 - Inspect recent write history
 - Discover workbook resources and MCP-native workflow prompts
+
+ExcelTamer 0.3.0 exposes 17 MCP tools, one resource, and two prompts.
 
 ## Validation
 

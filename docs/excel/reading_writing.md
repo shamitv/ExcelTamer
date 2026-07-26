@@ -1,7 +1,9 @@
 # Reading and Writing
 
-Every operation after `excel.open_workbook` uses its returned `workbook_id`.
-Workbook handles remain in the server session until `excel.close`.
+Every operation after `excel.open_workbook` or `excel.attach_workbook` uses its
+returned `workbook_id`. Workbook handles remain in the server session until
+`excel.close`; closing an attachment detaches it without closing the user's
+workbook.
 
 ## Reading
 

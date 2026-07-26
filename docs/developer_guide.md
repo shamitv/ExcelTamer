@@ -119,10 +119,13 @@ Run the automated suite from the repository root:
 python -m unittest discover -s test -p "test_*.py" -v
 ```
 
-The current suite runs eight tests covering the MCP surface, packaged prompts,
-range normalization, engine read/search/write behavior, and a real stdio
-and SSE handshake. These tests use fakes where workbook behavior is needed and
-do not launch Microsoft Excel.
+The current suite runs twelve tests covering the 17-tool MCP surface, packaged
+prompts, range normalization, engine read/search/write behavior, four
+Excel-free attachment scenarios, and real stdio and SSE handshakes. The
+attachment tests cover multi-application discovery, saved and unsaved
+workbooks, out-of-root paths, idempotent attachment, clear missing-Excel
+errors, non-owning detach, and rollback rejection. These tests use fakes where
+workbook behavior is needed and do not launch Microsoft Excel.
 
 For optional live validation, use the included example workbook:
 
@@ -141,6 +144,13 @@ python test/mcp_client.py --transport sse --port 8123 --file .\test\example.xlsx
 The workbook must be under one of `EXCELTAMER_MCP_ALLOWED_ROOTS`. The default
 allowed root is the current working directory.
 
+To validate attachment manually, leave a workbook open and focused in Excel,
+then use an MCP client to call `excel.list_open_workbooks`,
+`excel.attach_workbook`, `excel.get_structure`, and `excel.close`. Confirm the
+last call returns `status: "detached"` and that both Excel and the workbook
+remain open. Discovery and attachment deliberately bypass allowed-root
+filtering, so perform this check only with non-sensitive workbooks.
+
 ## Build and verify packages
 
 Run the following workflow from a clean repository checkout with the virtual
@@ -155,7 +165,7 @@ Select-String -Path .\pyproject.toml -Pattern '^version = '
 git status --short
 ```
 
-The current version is `0.2.1`. Review unexpected working-tree changes before
+The current version is `0.3.0`. Review unexpected working-tree changes before
 building.
 
 ### 2. Run the automated tests
@@ -170,10 +180,10 @@ python -m unittest discover -s test -p "test_*.py" -v
 python -m build
 ```
 
-For version `0.2.1`, this creates:
+For version `0.3.0`, this creates:
 
-- `dist\exceltamer-0.2.1.tar.gz` — source distribution
-- `dist\exceltamer-0.2.1-py3-none-any.whl` — binary wheel
+- `dist\exceltamer-0.3.0.tar.gz` — source distribution
+- `dist\exceltamer-0.3.0-py3-none-any.whl` — binary wheel
 
 The `dist/` directory is ignored by Git. If it contains artifacts from other
 versions, verify only the files for the version being prepared.
@@ -182,8 +192,8 @@ versions, verify only the files for the version being prepared.
 
 ```powershell
 python -m twine check `
-  .\dist\exceltamer-0.2.1.tar.gz `
-  .\dist\exceltamer-0.2.1-py3-none-any.whl
+  .\dist\exceltamer-0.3.0.tar.gz `
+  .\dist\exceltamer-0.3.0-py3-none-any.whl
 ```
 
 Both artifacts must report `PASSED`.
@@ -192,8 +202,8 @@ Both artifacts must report `PASSED`.
 
 ```powershell
 Get-FileHash -Algorithm SHA256 `
-  .\dist\exceltamer-0.2.1.tar.gz, `
-  .\dist\exceltamer-0.2.1-py3-none-any.whl
+  .\dist\exceltamer-0.3.0.tar.gz, `
+  .\dist\exceltamer-0.3.0-py3-none-any.whl
 ```
 
 Record these hashes when artifacts are transferred or retained for a release.
