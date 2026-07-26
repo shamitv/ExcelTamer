@@ -56,6 +56,56 @@ Example client configuration:
 }
 ```
 
+## Quick-start workflow
+
+After adding the server configuration to an MCP client, restart the client so
+it discovers ExcelTamer. You can then describe the workbook task in natural
+language; the client selects and invokes the `excel.*` tools.
+
+### Inspect a workbook
+
+Ask the client:
+
+```text
+Open C:\Users\you\Documents\Excel\budget.xlsx in read-only mode. List the
+worksheets, preview the first 10 rows of the first sheet, summarize what the
+workbook contains, and close it when finished.
+```
+
+The expected tool sequence is:
+
+1. `excel.open_workbook` with mode `ro`
+2. `excel.get_structure`
+3. `excel.read_sheet_preview` or `excel.read_range`
+4. `excel.close`
+
+`excel.open_workbook` returns a `workbook_id`. Every subsequent workbook tool
+requires that identifier, so the MCP client must reuse it until the workbook is
+closed.
+
+### Edit a workbook safely
+
+Ask the client:
+
+```text
+Open C:\Users\you\Documents\Excel\budget.xlsx in read-write mode. Create a
+checkpoint, update cell B4 on Sheet1 to 120, read the cell back to verify the
+change, save the workbook, and close it. If verification fails, roll back to
+the checkpoint.
+```
+
+The expected tool sequence is:
+
+1. `excel.open_workbook` with mode `rw`
+2. `excel.checkpoint_create`
+3. One or more write tools
+4. A read tool to verify the result
+5. `excel.save` and `excel.close`, or `excel.checkpoint_rollback` on failure
+
+The MCP-native `safe-edit` prompt provides the same checkpoint-first workflow.
+If the workbook path is outside `EXCELTAMER_MCP_ALLOWED_ROOTS`, opening it is
+rejected before Excel is started.
+
 ## Tools
 
 ### Workbook lifecycle
