@@ -60,6 +60,31 @@ class ExcelAutomation:
     def list_sheets(self) -> list[str]:
         return [sheet.name for sheet in self.wb.sheets]
 
+    def capture_screenshot_png(
+        self,
+        sheet_name: str,
+        output_path: str,
+        cell_range: str | None = None,
+    ) -> bool:
+        """Render a worksheet range to a PNG file."""
+        try:
+            sheet = self.wb.sheets[sheet_name]
+            target = (
+                sheet.range(cell_range)
+                if cell_range and cell_range.strip()
+                else sheet.used_range
+            )
+            target.api.Show()
+            target.to_png(output_path)
+            return True
+        except Exception:
+            logger.exception(
+                "Failed to capture screenshot for sheet=%s range=%s",
+                sheet_name,
+                cell_range,
+            )
+            return False
+
     def query_cell(self, sheet_name: str, cell: str) -> dict[str, Any]:
         """Return the value, formula, and rendered text for one cell."""
         target = self.wb.sheets[sheet_name].range(cell)

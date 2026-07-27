@@ -3,6 +3,7 @@ import asyncio
 import json
 import logging
 from pathlib import Path
+from typing import Any
 
 from mcp.server import Server
 from mcp.types import (
@@ -18,6 +19,7 @@ from .engine import read as read_engine
 from .engine import write as write_engine
 from .engine import search as search_engine
 from .engine import diff as diff_engine
+from .engine import image as image_engine
 from .sessions import session
 from mcp.types import Resource, Prompt, PromptMessage, PromptArgument
 
@@ -154,6 +156,60 @@ async def handle_list_tools() -> list[Tool]:
                 },
                 "required": ["workbook_id", "sheet"]
             }
+        ),
+        Tool(
+            name="excel.capture_range_image",
+            description=(
+                "Capture a worksheet's used range or an explicit A1 range as a PNG. "
+                "Returns native image content by default, or a server-local temporary "
+                "file path when return_image is false."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "workbook_id": {"type": "string"},
+                    "sheet": {"type": "string"},
+                    "range_a1": {
+                        "type": ["string", "null"],
+                        "description": (
+                            "Optional A1 range such as A1:H20. Blank or omitted uses "
+                            "the worksheet's used range."
+                        ),
+                    },
+                    "return_image": {
+                        "type": "boolean",
+                        "default": True,
+                        "description": (
+                            "True returns PNG image data; false returns a server-local "
+                            "temporary file path."
+                        ),
+                    },
+                },
+                "required": ["workbook_id", "sheet"],
+                "additionalProperties": False,
+            },
+            outputSchema={
+                "type": "object",
+                "properties": {
+                    "status": {"type": "string", "enum": ["success", "error"]},
+                    "image": {"type": "boolean"},
+                    "file": {"type": "boolean"},
+                    "image_data": {"type": ["string", "null"]},
+                    "file_path": {"type": ["string", "null"]},
+                    "image_mime_type": {"type": ["string", "null"]},
+                    "error": {"type": ["string", "null"]},
+                },
+                "required": [
+                    "status",
+                    "image",
+                    "file",
+                    "image_data",
+                    "file_path",
+                    "image_mime_type",
+                    "error",
+                ],
+                "additionalProperties": False,
+            },
         ),
         Tool(
             name="excel.change_cell_value",
@@ -352,7 +408,7 @@ async def handle_get_prompt(name: str, arguments: dict | None) -> types.GetPromp
 @server.call_tool()
 async def handle_call_tool(
     name: str, arguments: dict | None
-) -> list[TextContent | ImageContent | EmbeddedResource]:
+) -> Any:
     if not arguments:
         arguments = {}
         
@@ -441,6 +497,56 @@ async def handle_call_tool(
             
             result = read_engine.read_sheet_preview(workbook_id, sheet, rows=rows, cols=cols)
             return [TextContent(type="text", text=str(result))]
+
+        elif name == "excel.capture_range_image":
+            workbook_id = arguments.get("workbook_id")
+            sheet = arguments.get("sheet")
+            range_a1 = arguments.get("range_a1")
+            return_image = arguments.get("return_image", True)
+
+            if not workbook_id or not sheet:
+                raise ValueError("workbook_id and sheet are required")
+
+            result = image_engine.capture_range_image(
+                workbook_id,
+                sheet,
+                range_a1=range_a1,
+                return_image=return_image,
+            )
+
+            if result["status"] == "error":
+                return types.CallToolResult(
+                    content=[
+                        TextContent(
+                            type="text",
+                            text=json.dumps(result),
+                        )
+                    ],
+                    structuredContent=result,
+                    isError=True,
+                )
+
+            if result["image"]:
+                return (
+                    [
+                        ImageContent(
+                            type="image",
+                            data=result["image_data"],
+                            mimeType=result["image_mime_type"],
+                        )
+                    ],
+                    result,
+                )
+
+            return (
+                [
+                    TextContent(
+                        type="text",
+                        text=json.dumps(result),
+                    )
+                ],
+                result,
+            )
 
         elif name == "excel.change_cell_value":
             workbook_id = arguments.get("workbook_id")
