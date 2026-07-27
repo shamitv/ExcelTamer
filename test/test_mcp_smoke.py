@@ -11,8 +11,8 @@ from unittest.mock import Mock, patch
 
 import pandas as pd
 from mcp import ClientSession, StdioServerParameters
-from mcp.client.sse import sse_client
 from mcp.client.stdio import stdio_client
+from mcp.client.streamable_http import streamablehttp_client
 
 from ExcelTamer.mcp.engine import diff, read, search, workbook, write
 from ExcelTamer.mcp.excel import ExcelAutomation
@@ -358,8 +358,8 @@ class StdioHandshakeTests(unittest.IsolatedAsyncioTestCase):
                 self.assertTrue(safe_edit.messages[0].content.text.strip())
 
 
-class SseHandshakeTests(unittest.IsolatedAsyncioTestCase):
-    async def test_sse_discovery_and_prompt_retrieval(self):
+class StreamableHttpHandshakeTests(unittest.IsolatedAsyncioTestCase):
+    async def test_streamable_http_discovery_and_prompt_retrieval(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as port_socket:
             port_socket.bind(("127.0.0.1", 0))
             port = port_socket.getsockname()[1]
@@ -382,12 +382,15 @@ class SseHandshakeTests(unittest.IsolatedAsyncioTestCase):
         try:
             await self._wait_for_listener(process, port)
             async with asyncio.timeout(10):
-                async with sse_client(
-                    f"http://127.0.0.1:{port}/sse",
+                async with streamablehttp_client(
+                    f"http://127.0.0.1:{port}/mcp",
                     timeout=5,
                     sse_read_timeout=5,
-                ) as streams:
-                    async with ClientSession(*streams) as session:
+                ) as (read_stream, write_stream, _get_session_id):
+                    async with ClientSession(
+                        read_stream,
+                        write_stream,
+                    ) as session:
                         await session.initialize()
                         tools = await session.list_tools()
                         resources = await session.list_resources()
@@ -399,7 +402,7 @@ class SseHandshakeTests(unittest.IsolatedAsyncioTestCase):
                         self.assertEqual(len(prompts.prompts), 2)
                         self.assertTrue(safe_edit.messages[0].content.text.strip())
 
-            # Give the request handler time to finish after the SSE client closes.
+            # Give the request handler time to finish after the HTTP client closes.
             await asyncio.sleep(0.1)
         finally:
             if process.returncode is None:
@@ -431,7 +434,8 @@ class SseHandshakeTests(unittest.IsolatedAsyncioTestCase):
                         errors="replace"
                     )
                 self.fail(
-                    f"SSE server exited before accepting connections:\n{stderr}"
+                    "Streamable HTTP server exited before accepting "
+                    f"connections:\n{stderr}"
                 )
             try:
                 _reader, writer = await asyncio.open_connection(
@@ -444,7 +448,10 @@ class SseHandshakeTests(unittest.IsolatedAsyncioTestCase):
             writer.close()
             await writer.wait_closed()
             return
-        self.fail(f"SSE server did not listen on port {port} within 10 seconds")
+        self.fail(
+            f"Streamable HTTP server did not listen on port {port} "
+            "within 10 seconds"
+        )
 
 
 if __name__ == "__main__":

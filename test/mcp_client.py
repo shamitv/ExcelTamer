@@ -8,8 +8,8 @@ import sys
 from contextlib import AsyncExitStack
 
 from mcp import ClientSession, StdioServerParameters
-from mcp.client.sse import sse_client
 from mcp.client.stdio import stdio_client
+from mcp.client.streamable_http import streamablehttp_client
 
 
 async def run_client(
@@ -33,8 +33,8 @@ async def run_client(
             )
             read, write = await stack.enter_async_context(stdio_client(params))
         else:
-            read, write = await stack.enter_async_context(
-                sse_client(f"http://localhost:{port}/sse")
+            read, write, _get_session_id = await stack.enter_async_context(
+                streamablehttp_client(f"http://localhost:{port}/mcp")
             )
 
         session = await stack.enter_async_context(ClientSession(read, write))
@@ -84,7 +84,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--transport",
-        choices=["stdio", "sse"],
+        choices=["stdio", "streamable-http"],
         default="stdio",
     )
     parser.add_argument("--port", type=int, default=8123)
