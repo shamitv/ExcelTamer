@@ -22,29 +22,29 @@ Stdio is the default and is recommended for local MCP clients:
 exceltamer-mcp
 ```
 
-SSE can be enabled by supplying a port:
+Streamable HTTP can be enabled by supplying a port:
 
 ```powershell
 $env:EXCELTAMER_MCP_ALLOWED_ROOTS = "C:\Users\you\Documents\Excel"
 exceltamer-mcp --port 8123
 ```
 
-Configure an SSE-capable MCP client to connect to the server:
+Configure an HTTP-capable MCP client to connect to the server:
 
 ```json
 {
   "mcpServers": {
     "exceltamer": {
-      "url": "http://127.0.0.1:8123/sse"
+      "type": "http",
+      "url": "http://127.0.0.1:8123/mcp"
     }
   }
 }
 ```
 
-Client configuration field names can vary. The SSE stream endpoint is
-`http://127.0.0.1:8123/sse`, and client messages are posted to
-`http://127.0.0.1:8123/messages/`. `python -m ExcelTamer.mcp.main` supports the
-same arguments.
+Client configuration field names can vary. The Streamable HTTP endpoint is
+`http://127.0.0.1:8123/mcp`. `python -m ExcelTamer.mcp.main` supports the same
+arguments.
 
 ## Configuration
 
@@ -249,8 +249,8 @@ To validate actual Excel automation:
 python test/mcp_client.py --file test/fixtures/simple.xlsx
 ```
 
-Use `--transport sse --port 8123` when validating a separately running SSE
-server.
+Use `--transport streamable-http --port 8123` when validating a separately
+running Streamable HTTP server.
 
 ## Architecture
 

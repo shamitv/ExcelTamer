@@ -49,7 +49,7 @@ as ExcelTamer runtime dependencies.
 | Path | Purpose |
 | --- | --- |
 | `pyproject.toml` | Package metadata, supported Python versions, runtime dependencies, and the `exceltamer-mcp` entry point |
-| `ExcelTamer/mcp/main.py` | CLI parsing and stdio/SSE transport selection |
+| `ExcelTamer/mcp/main.py` | CLI parsing and stdio/Streamable HTTP transport selection |
 | `ExcelTamer/mcp/server.py` | MCP tools, resources, prompts, request dispatch, and transport hosts |
 | `ExcelTamer/mcp/engine/` | Workbook lifecycle, read, write, search, screenshot, checkpoint, and audit-history operations |
 | `ExcelTamer/mcp/excel.py` | Internal xlwings backend, including worksheet-range PNG rendering |
@@ -58,7 +58,7 @@ as ExcelTamer runtime dependencies.
 | `ExcelTamer/mcp/audit.py` and `sessions.py` | Write-audit persistence and active workbook sessions |
 | `ExcelTamer/mcp/prompts/` | Markdown bodies for the packaged MCP prompts |
 | `test/test_mcp_smoke.py` | Automated protocol and engine smoke tests |
-| `test/mcp_client.py` | Standalone stdio/SSE validation client |
+| `test/mcp_client.py` | Standalone stdio/Streamable HTTP validation client |
 | `docs/excel/` | Internal Excel behavior, constraints, and threading documentation |
 
 The MCP protocol is the public integration boundary. Treat the xlwings backend
@@ -90,10 +90,10 @@ discovery, retrieves the packaged prompts, and exits:
 python test/mcp_client.py
 ```
 
-### SSE
+### Streamable HTTP
 
-Start the SSE server in one PowerShell window. Environment variables must be
-set in the server process:
+Start the Streamable HTTP server in one PowerShell window. Environment
+variables must be set in the server process:
 
 ```powershell
 $env:EXCELTAMER_MCP_ALLOWED_ROOTS = (Get-Location).Path
@@ -103,11 +103,10 @@ exceltamer-mcp --port 8123
 In a second activated PowerShell window, connect the validation client:
 
 ```powershell
-python test/mcp_client.py --transport sse --port 8123
+python test/mcp_client.py --transport streamable-http --port 8123
 ```
 
-The SSE stream is available at `http://127.0.0.1:8123/sse`; client messages are
-posted to `http://127.0.0.1:8123/messages/`. See the
+The MCP endpoint is available at `http://127.0.0.1:8123/mcp`. See the
 [configuration reference](mcp_server.md#configuration) for every environment
 variable that influences the server.
 
@@ -121,8 +120,8 @@ python -m unittest discover -s test -p "test_*.py" -v
 
 The current suite runs 24 tests covering the 18-tool MCP surface, packaged
 prompts, range normalization, engine read/search/write and screenshot behavior,
-Excel-free attachment scenarios, and real stdio and SSE handshakes. The
-attachment tests cover multi-application discovery, saved and unsaved
+Excel-free attachment scenarios, and real stdio and Streamable HTTP handshakes.
+The attachment tests cover multi-application discovery, saved and unsaved
 workbooks, out-of-root paths, idempotent attachment, clear missing-Excel
 errors, non-owning detach, and rollback rejection. These tests use fakes where
 workbook behavior is needed and do not launch Microsoft Excel.
@@ -134,11 +133,11 @@ python test/mcp_client.py --file .\test\example.xlsx
 ```
 
 This opens the workbook through Excel in read-only mode, retrieves its
-structure, and closes it. To run the same check against an already running SSE
-server:
+structure, and closes it. To run the same check against an already running
+Streamable HTTP server:
 
 ```powershell
-python test/mcp_client.py --transport sse --port 8123 --file .\test\example.xlsx
+python test/mcp_client.py --transport streamable-http --port 8123 --file .\test\example.xlsx
 ```
 
 The workbook must be under one of `EXCELTAMER_MCP_ALLOWED_ROOTS`. The default

@@ -25,8 +25,8 @@ pip install ExcelTamer
 
 ### 2. Add ExcelTamer to your MCP client
 
-Choose either stdio or SSE, depending on the transports supported by your MCP
-client.
+Choose either stdio or Streamable HTTP, depending on the transports supported
+by your MCP client.
 
 #### Stdio
 
@@ -51,31 +51,31 @@ containing your workbooks:
 access. The server defaults to read-only workbook mode and records write
 operations in an audit log.
 
-#### SSE
+#### Streamable HTTP
 
-To use SSE, start ExcelTamer separately in PowerShell. Set server environment
-variables in the same shell:
+To use Streamable HTTP, start ExcelTamer separately in PowerShell. Set server
+environment variables in the same shell:
 
 ```powershell
 $env:EXCELTAMER_MCP_ALLOWED_ROOTS = "C:\Users\you\Documents\Excel"
 exceltamer-mcp --port 8123
 ```
 
-Then configure an SSE-capable MCP client to connect to the stream endpoint:
+Then configure an HTTP-capable MCP client to connect to the MCP endpoint:
 
 ```json
 {
   "mcpServers": {
     "exceltamer": {
-      "url": "http://127.0.0.1:8123/sse"
+      "type": "http",
+      "url": "http://127.0.0.1:8123/mcp"
     }
   }
 }
 ```
 
 Client configuration field names can vary; use
-`http://127.0.0.1:8123/sse` as the server URL. ExcelTamer receives client
-messages at `http://127.0.0.1:8123/messages/`.
+`http://127.0.0.1:8123/mcp` as the server URL.
 
 ### 3. Restart the client and ask it to use Excel
 
@@ -139,7 +139,7 @@ The module form remains available:
 python -m ExcelTamer.mcp.main
 ```
 
-For SSE transport:
+For Streamable HTTP transport:
 
 ```powershell
 exceltamer-mcp --port 8123
@@ -154,7 +154,7 @@ exceltamer-mcp [-h] [--port PORT]
 | Option | Description |
 | --- | --- |
 | `-h`, `--help` | Show the command help and exit |
-| `--port PORT` | Run the SSE transport on the specified integer port |
+| `--port PORT` | Run the Streamable HTTP transport on the specified integer port |
 
 When `--port` is omitted, the server uses stdio transport. The module form
 accepts the same options:

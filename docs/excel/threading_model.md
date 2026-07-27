@@ -12,8 +12,8 @@ instance stored in the process-wide session. Entries record whether the
 workbook was opened by MCP or attached as a non-owning handle. Engine functions
 retrieve that instance and call xlwings on the server execution thread.
 
-Stdio is the recommended local transport. SSE uses the same in-process session
-and backend.
+Stdio is the recommended local transport. Streamable HTTP uses the same
+in-process session and backend.
 
 ## Development rules
 
