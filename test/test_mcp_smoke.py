@@ -32,7 +32,7 @@ class ProtocolSurfaceTests(unittest.TestCase):
         resources = asyncio.run(handle_list_resources())
         prompts = asyncio.run(handle_list_prompts())
 
-        self.assertEqual(len(tools), 17)
+        self.assertEqual(len(tools), 18)
         self.assertEqual(len(resources), 1)
         self.assertEqual(
             {prompt.name for prompt in prompts},
@@ -352,7 +352,7 @@ class StdioHandshakeTests(unittest.IsolatedAsyncioTestCase):
                 prompts = await session.list_prompts()
                 safe_edit = await session.get_prompt("safe-edit")
 
-                self.assertEqual(len(tools.tools), 17)
+                self.assertEqual(len(tools.tools), 18)
                 self.assertEqual(len(resources.resources), 1)
                 self.assertEqual(len(prompts.prompts), 2)
                 self.assertTrue(safe_edit.messages[0].content.text.strip())
@@ -394,7 +394,7 @@ class SseHandshakeTests(unittest.IsolatedAsyncioTestCase):
                         prompts = await session.list_prompts()
                         safe_edit = await session.get_prompt("safe-edit")
 
-                        self.assertEqual(len(tools.tools), 17)
+                        self.assertEqual(len(tools.tools), 18)
                         self.assertEqual(len(resources.resources), 1)
                         self.assertEqual(len(prompts.prompts), 2)
                         self.assertTrue(safe_edit.messages[0].content.text.strip())
