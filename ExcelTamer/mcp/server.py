@@ -644,43 +644,49 @@ async def run_stdio():
             server.create_initialization_options()
         )
 
-async def run_sse(port: int):
-    from mcp.server.sse import SseServerTransport
+async def run_streamable_http(port: int):
+    from contextlib import asynccontextmanager
+    from collections.abc import AsyncIterator
+
+    from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
     from starlette.applications import Starlette
-    from starlette.responses import Response
-    from starlette.routing import Mount, Route
+    from starlette.routing import Mount
+    from starlette.types import Receive, Scope, Send
     import uvicorn
-    
-    sse = SseServerTransport("/messages/")
-    
-    async def handle_sse(request):
-        async with sse.connect_sse(
-            request.scope, 
-            request.receive, 
-            request._send
-        ) as streams:
-            await server.run(
-                streams[0], 
-                streams[1], 
-                server.create_initialization_options()
-            )
-        return Response()
-        
+
+    session_manager = StreamableHTTPSessionManager(
+        app=server,
+        stateless=False,
+        json_response=False,
+    )
+
+    async def handle_streamable_http(
+        scope: Scope,
+        receive: Receive,
+        send: Send,
+    ) -> None:
+        await session_manager.handle_request(scope, receive, send)
+
+    @asynccontextmanager
+    async def lifespan(_app: Starlette) -> AsyncIterator[None]:
+        async with session_manager.run():
+            yield
+
     app = Starlette(
         debug=True,
         routes=[
-            Route("/sse", endpoint=handle_sse, methods=["GET"]),
-            Mount("/messages/", app=sse.handle_post_message),
-        ]
+            Mount("/mcp", app=handle_streamable_http),
+        ],
+        lifespan=lifespan,
     )
-    
+
     config = uvicorn.Config(app, host="0.0.0.0", port=port, log_level="info")
     server_instance = uvicorn.Server(config)
     await server_instance.serve()
 
 async def run(port: int | None = None):
     if port is not None:
-        await run_sse(port)
+        await run_streamable_http(port)
     else:
         await run_stdio()
 
