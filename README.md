@@ -185,13 +185,14 @@ the quick start, or in the shell before starting `exceltamer-mcp`.
   reopening or taking ownership of it
 - Open, inspect, save, save-as, close, and detach workbooks
 - Read cells, ranges, sheet previews, and workbook structure
+- Capture a worksheet's used range or an explicit A1 range as a PNG
 - Write cells, batches, and rectangular ranges
 - Search workbook values with exact, contains, or regex matching
 - Create and roll back checkpoints
 - Inspect recent write history
 - Discover workbook resources and MCP-native workflow prompts
 
-ExcelTamer 0.3.0 exposes 17 MCP tools, one resource, and two prompts.
+ExcelTamer 0.4.0 exposes 18 MCP tools, one resource, and two prompts.
 
 ## Validation
 

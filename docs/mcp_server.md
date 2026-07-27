@@ -12,7 +12,7 @@ pip install ExcelTamer
 ```
 
 The installed package provides the `exceltamer-mcp` command.
-ExcelTamer 0.3.0 exposes 17 MCP tools, one resource, and two prompts.
+ExcelTamer 0.4.0 exposes 18 MCP tools, one resource, and two prompts.
 
 ## Transports
 
@@ -139,6 +139,23 @@ because rollback requires closing and reopening the workbook.
 > same Windows user session, including unsaved workbooks and files outside the
 > configured roots. Use attachment only with a trusted local MCP client.
 
+### Capture a worksheet or range as an image
+
+Call `excel.capture_range_image` with a `workbook_id`, worksheet name, and
+optional A1 range. A blank or omitted `range_a1` captures the worksheet's used
+range.
+
+With the default `return_image: true`, the tool returns native MCP image
+content plus raw base64 PNG data in the structured `image_data` field. The
+server deletes its scratch file after encoding. With `return_image: false`,
+the response instead contains an absolute server-local path in `file_path`;
+the caller owns cleanup of that file.
+
+Both modes return `status`, `image`, `file`, `image_data`, `file_path`,
+`image_mime_type`, and `error`. Runtime failures use the same structured shape
+and set the MCP result's error flag. A file path is meaningful only to clients
+that can access the MCP server's filesystem.
+
 ### Edit a workbook safely
 
 Ask the client:
@@ -183,6 +200,7 @@ rejected before Excel is started.
 | `excel.query_cell` | Return a cell's value, formula, and rendered text |
 | `excel.read_range` | Return a bounded rectangular value matrix |
 | `excel.read_sheet_preview` | Return a bounded top-left sheet preview |
+| `excel.capture_range_image` | Capture a used range or explicit A1 range as PNG image data or a server-local temporary file |
 
 ### Writing and search
 

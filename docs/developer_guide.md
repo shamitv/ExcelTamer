@@ -51,8 +51,8 @@ as ExcelTamer runtime dependencies.
 | `pyproject.toml` | Package metadata, supported Python versions, runtime dependencies, and the `exceltamer-mcp` entry point |
 | `ExcelTamer/mcp/main.py` | CLI parsing and stdio/SSE transport selection |
 | `ExcelTamer/mcp/server.py` | MCP tools, resources, prompts, request dispatch, and transport hosts |
-| `ExcelTamer/mcp/engine/` | Workbook lifecycle, read, write, search, checkpoint, and audit-history operations |
-| `ExcelTamer/mcp/excel.py` | Internal xlwings backend |
+| `ExcelTamer/mcp/engine/` | Workbook lifecycle, read, write, search, screenshot, checkpoint, and audit-history operations |
+| `ExcelTamer/mcp/excel.py` | Internal xlwings backend, including worksheet-range PNG rendering |
 | `ExcelTamer/mcp/config.py` | Environment-driven server settings |
 | `ExcelTamer/mcp/safety.py` | Workbook path validation |
 | `ExcelTamer/mcp/audit.py` and `sessions.py` | Write-audit persistence and active workbook sessions |
@@ -119,8 +119,8 @@ Run the automated suite from the repository root:
 python -m unittest discover -s test -p "test_*.py" -v
 ```
 
-The current suite runs twelve tests covering the 17-tool MCP surface, packaged
-prompts, range normalization, engine read/search/write behavior, four
+The current suite runs 24 tests covering the 18-tool MCP surface, packaged
+prompts, range normalization, engine read/search/write and screenshot behavior,
 Excel-free attachment scenarios, and real stdio and SSE handshakes. The
 attachment tests cover multi-application discovery, saved and unsaved
 workbooks, out-of-root paths, idempotent attachment, clear missing-Excel
@@ -165,7 +165,7 @@ Select-String -Path .\pyproject.toml -Pattern '^version = '
 git status --short
 ```
 
-The current version is `0.3.0`. Review unexpected working-tree changes before
+The current version is `0.4.0`. Review unexpected working-tree changes before
 building.
 
 ### 2. Run the automated tests
@@ -180,10 +180,10 @@ python -m unittest discover -s test -p "test_*.py" -v
 python -m build
 ```
 
-For version `0.3.0`, this creates:
+For version `0.4.0`, this creates:
 
-- `dist\exceltamer-0.3.0.tar.gz` — source distribution
-- `dist\exceltamer-0.3.0-py3-none-any.whl` — binary wheel
+- `dist\exceltamer-0.4.0.tar.gz` — source distribution
+- `dist\exceltamer-0.4.0-py3-none-any.whl` — binary wheel
 
 The `dist/` directory is ignored by Git. If it contains artifacts from other
 versions, verify only the files for the version being prepared.
@@ -192,8 +192,8 @@ versions, verify only the files for the version being prepared.
 
 ```powershell
 python -m twine check `
-  .\dist\exceltamer-0.3.0.tar.gz `
-  .\dist\exceltamer-0.3.0-py3-none-any.whl
+  .\dist\exceltamer-0.4.0.tar.gz `
+  .\dist\exceltamer-0.4.0-py3-none-any.whl
 ```
 
 Both artifacts must report `PASSED`.
@@ -202,8 +202,8 @@ Both artifacts must report `PASSED`.
 
 ```powershell
 Get-FileHash -Algorithm SHA256 `
-  .\dist\exceltamer-0.3.0.tar.gz, `
-  .\dist\exceltamer-0.3.0-py3-none-any.whl
+  .\dist\exceltamer-0.4.0.tar.gz, `
+  .\dist\exceltamer-0.4.0-py3-none-any.whl
 ```
 
 Record these hashes when artifacts are transferred or retained for a release.
